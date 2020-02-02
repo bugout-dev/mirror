@@ -6,6 +6,7 @@ Support checkpointing against a small state object - the integer ID of the last 
 
 import argparse
 import json
+import glob
 import os
 import time
 from typing import Any, Dict, List, Optional, TextIO
@@ -126,8 +127,34 @@ def populator(parser: argparse.ArgumentParser) -> None:
         required=True,
         help='Path to directory in which crawl results should be written',
     )
-
     parser.set_defaults(func=allrepos_handler)
+
+def nextid(outdir: str) -> int:
+    """
+    Given a directory containing only JSON files produced by an allrepos crawl, this function
+    returns the maximum ID seen in that crawl.
+
+    Args:
+    outdir
+        Output directory for an allrepos crawl
+
+    Returns: Maximum ID over all repositories seen in the crawl
+    """
+    result_files = glob.glob(os.path.join(outdir, '*.json'))
+    if not result_files:
+        return 0
+    indexed_result_files = [
+        (
+            rfile,
+            int(os.path.basename(rfile).split('.')[0])
+        ) for rfile in result_files
+    ]
+    last_file, index = max(indexed_result_files, key=lambda p: p[1])
+    with open(last_file, 'r') as ifp:
+        result = json.load(ifp)
+    if len(result['data']) == 0:
+        return index
+    return result['data'][-1]['id']
 
 def allrepos_handler(args: argparse.Namespace) -> None:
     """
@@ -143,7 +170,8 @@ def allrepos_handler(args: argparse.Namespace) -> None:
 
     Returns: None
     """
-    current_max = args.start_id
+    next_id = nextid(args.outdir)
+    current_max = max(args.start_id, next_id)
     while current_max < args.max_id:
         result = crawl(
             current_max,
