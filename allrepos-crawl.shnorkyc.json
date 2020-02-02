@@ -18,6 +18,7 @@
         "cmd": [
             "github",
             "allrepos",
+            "crawl",
             "--start-id",
             "env:MIRROR_START_ID",
             "--max-id",
@@ -26,7 +27,7 @@
             "env:MIRROR_INTERVAL",
             "--min-rate-limit",
             "env:MIRROR_MIN_RATE_LIMIT",
-            "--outdir",
+            "--crawldir",
             "/shnorky/outputs",
             "--batch-size",
             "env:MIRROR_BATCH_SIZE"

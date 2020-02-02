@@ -9,9 +9,11 @@ import json
 import glob
 import os
 import time
-from typing import Any, Dict, List, Optional, TextIO
+from typing import Any, Callable, Dict, List, Optional, TextIO
 
 import requests
+
+from ..populate import populate_cli
 
 subcommand = 'allrepos'
 
@@ -76,13 +78,13 @@ def crawl(start_id: int, max_id: int, interval: float, min_rate_limit: int) -> D
 
     return result
 
-def populator(parser: argparse.ArgumentParser) -> None:
+def crawl_populator(parser: argparse.ArgumentParser) -> None:
     """
-    Populates parser with allrepos parameters
+    Populates parser with crawl parameters
 
     Args:
     parser
-        Argument parser representing allrepos functionality
+        Argument parser representing crawl functionality
 
     Returns: None
     """
@@ -122,25 +124,24 @@ def populator(parser: argparse.ArgumentParser) -> None:
         help='Number of pages  should (roughly) be processed before writing results to disk',
     )
     parser.add_argument(
-        '--outdir',
-        '-o',
+        '--crawldir',
+        '-d',
         required=True,
         help='Path to directory in which crawl results should be written',
     )
-    parser.set_defaults(func=allrepos_handler)
+    parser.set_defaults(func=crawl_handler)
 
-def nextid(outdir: str) -> int:
-    """
-    Given a directory containing only JSON files produced by an allrepos crawl, this function
+def nextid(crawldir: str) -> int:
+    """ Given a directory containing only JSON files produced by an allrepos crawl, this function
     returns the maximum ID seen in that crawl.
 
     Args:
-    outdir
+    crawldir
         Output directory for an allrepos crawl
 
     Returns: Maximum ID over all repositories seen in the crawl
     """
-    result_files = glob.glob(os.path.join(outdir, '*.json'))
+    result_files = glob.glob(os.path.join(crawldir, '*.json'))
     if not result_files:
         return 0
     indexed_result_files = [
@@ -156,7 +157,22 @@ def nextid(outdir: str) -> int:
         return index
     return result['data'][-1]['id']
 
-def allrepos_handler(args: argparse.Namespace) -> None:
+def populator(parser: argparse.ArgumentParser) -> None:
+    """
+    Populates parser with allrepos and children
+
+    Args:
+    parser
+        Argument parser representing allrepos functionality
+
+    Returns: None
+    """
+    subcommands: Dict[str, Callable[[argparse.ArgumentParser], None]] = {
+        'crawl': crawl_populator,
+    }
+    populate_cli(parser, subcommands)
+
+def crawl_handler(args: argparse.Namespace) -> None:
     """
     Processes arguments as parsed from the command line and uses them to run a crawl of the GitHub
     /repositories endpoint.
@@ -170,7 +186,7 @@ def allrepos_handler(args: argparse.Namespace) -> None:
 
     Returns: None
     """
-    next_id = nextid(args.outdir)
+    next_id = nextid(args.crawldir)
     current_max = max(args.start_id, next_id)
     while current_max < args.max_id:
         result = crawl(
@@ -179,7 +195,7 @@ def allrepos_handler(args: argparse.Namespace) -> None:
             args.interval,
             args.min_rate_limit,
         )
-        outfile = os.path.join(args.outdir, f'{current_max}.json')
+        outfile = os.path.join(args.crawldir, f'{current_max}.json')
         with open(outfile, 'w') as ofp:
             json.dump(result, ofp)
 
