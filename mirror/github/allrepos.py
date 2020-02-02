@@ -7,7 +7,6 @@ Support checkpointing against a small state object - the integer ID of the last 
 import argparse
 import json
 import os
-import sys
 import time
 from typing import Any, Dict, List, Optional, TextIO
 
@@ -106,22 +105,34 @@ def populator(parser: argparse.ArgumentParser) -> None:
         help='Minimum remaining rate limit on API under which the crawl is interrupted',
     )
     parser.add_argument(
-        '--outfile',
+        '--batch-size',
+        '-n',
+        type=int,
+        default=3000,
+        help='Number of pages  should (roughly) be processed before writing results to disk',
+    )
+    parser.add_argument(
+        '--outdir',
         '-o',
-        required=False,
-        help='Path to file at which crawl results should be written',
+        required=True,
+        help='Path to directory in which crawl results should be written',
     )
 
     parser.set_defaults(func=allrepos_handler)
 
 def allrepos_handler(args: argparse.Namespace) -> None:
-    file_handle: TextIO = sys.stdout
-    if args.outfile is not None:
-        file_handle = open(args.outfile, 'w')
+    current_max = args.start_id
+    while current_max < args.max_id:
+        result = crawl(
+            current_max,
+            min(current_max + args.batch_size, args.max_id),
+            args.interval,
+            args.min_rate_limit,
+        )
+        outfile = os.path.join(args.outdir, f'{current_max}.json')
+        with open(outfile, 'w') as ofp:
+            json.dump(result, ofp)
 
-    try:
-        result = crawl(args.start_id, args.max_id, args.interval, args.min_rate_limit)
-        json.dump(result, file_handle)
-    finally:
-        if args.outfile is not None:
-            file_handle.close()
+        if len(result['data']) == 0:
+            break
+        current_max = result['data'][-1]['id']
