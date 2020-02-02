@@ -8,6 +8,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'requests',
+        'tqdm',
     ],
     description='mirror: Data analysis for software projects',
     author='Neeraj Kashyap',

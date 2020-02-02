@@ -14,6 +14,7 @@ import time
 from typing import Any, Callable, Dict, Iterator, List, Optional, TextIO
 
 import requests
+from tqdm import tqdm
 
 from ..populate import populate_cli
 
@@ -231,13 +232,15 @@ def sample(crawldir: str, choose_probability: float) -> Iterator[Dict[str, Any]]
     yields the next sample.
 
     NOTE: Not what I expected, but much faster than the following command:
-    $ cat ~/data/mirror/allrepos/*.json | \
-        jq -rc ".data[]" | \
-        awk 'BEGIN {srand()} !/^$/ { if (rand() <= 0.01) print $0 }' \
-        >outfile.jsonl
+    $ cat <crawldir>/*.json | jq -rc ".data[]" | perl -n -e 'print if (rand() < .01)' >outfile.jsonl
 
-    awk bit comes from here:
+    perl bit comes from here:
     https://stackoverflow.com/questions/692312/randomly-pick-lines-from-a-file-without-slurping-it-with-unix
+    (It's such a nice sampling trick.)
+
+    NOTE: Useful command when testing sample rate:
+    $ ls -1 <crawldir> | xargs -I{} jq ".data | length" <crawldir>/{} | awk '{s+=$1} END {print s}'
+    Takes some time to run, though.
 
     Args:
     crawldir
@@ -250,10 +253,10 @@ def sample(crawldir: str, choose_probability: float) -> Iterator[Dict[str, Any]]
     assert 0 <= choose_probability <= 1
 
     crawl_batches = glob.glob(os.path.join(crawldir, '*.json'))
-    for batch in crawl_batches:
+    for batch in tqdm(crawl_batches, desc='batch'):
         with open(batch, 'r') as ifp:
             result = json.load(ifp)
-        for repository in result['data']:
+        for repository in tqdm(result['data'], desc='repository', leave=False):
             if random.random() < choose_probability:
                 yield repository
 
