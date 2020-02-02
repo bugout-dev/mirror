@@ -1,0 +1,35 @@
+{
+    "build": {
+        "context": "",
+        "Dockerfile": "Dockerfile"
+    },
+    "run": {
+        "env": {
+            "GITHUB_TOKEN": "env:GITHUB_TOKEN"
+        },
+        "mountpoints": [
+            {
+                "mount_type": "dir",
+                "mountpoint": "/shnorky/outputs",
+                "read_only": false,
+                "required": true
+            }
+        ],
+        "cmd": [
+            "github",
+            "allrepos",
+            "--start-id",
+            "env:MIRROR_START_ID",
+            "--max-id",
+            "env:MIRROR_MAX_ID",
+            "--interval",
+            "env:MIRROR_INTERVAL",
+            "--min-rate-limit",
+            "env:MIRROR_MIN_RATE_LIMIT",
+            "--outdir",
+            "/shnorky/outputs",
+            "--batch-size",
+            "env:MIRROR_BATCH_SIZE"
+        ]
+    }
+}
