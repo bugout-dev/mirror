@@ -76,6 +76,15 @@ def crawl(start_id: int, max_id: int, interval: float, min_rate_limit: int) -> D
     return result
 
 def populator(parser: argparse.ArgumentParser) -> None:
+    """
+    Populates parser with allrepos parameters
+
+    Args:
+    parser
+        Argument parser representing allrepos functionality
+
+    Returns: None
+    """
     parser.add_argument(
         '--start-id',
         '-s',
@@ -121,6 +130,19 @@ def populator(parser: argparse.ArgumentParser) -> None:
     parser.set_defaults(func=allrepos_handler)
 
 def allrepos_handler(args: argparse.Namespace) -> None:
+    """
+    Processes arguments as parsed from the command line and uses them to run a crawl of the GitHub
+    /repositories endpoint.
+
+    Results are stored as JSON file in the output directory specified in the arguments.
+
+    Args:
+    args
+        argparse.Namespace object containing commands to the allrepos command parser passed from
+        command line
+
+    Returns: None
+    """
     current_max = args.start_id
     while current_max < args.max_id:
         result = crawl(
