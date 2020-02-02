@@ -186,3 +186,6 @@ def allrepos_handler(args: argparse.Namespace) -> None:
         if len(result['data']) == 0:
             break
         current_max = result['data'][-1]['id']
+
+        if result['ending_rate_limit'] < args.min_rate_limit:
+            break
