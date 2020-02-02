@@ -22,7 +22,8 @@ class TestGenerateMirrorCLI(unittest.TestCase):
         }
 
     def test_generate_mirror_cli_1(self):
-        parser = mirror.cli.generate_mirror_cli(self.subcommand_populators)
+        parser = argparse.ArgumentParser()
+        mirror.cli.populate_cli(parser, self.subcommand_populators)
         args = parser.parse_args([self.subcommand, '-a', 'lol', 'rofl'])
         self.assertEqual(args.opt_a, 'lol')
         self.assertIsNone(args.opt_b)
@@ -30,17 +31,20 @@ class TestGenerateMirrorCLI(unittest.TestCase):
         self.assertEqual(args.positional_arg, 'rofl')
 
     def test_generate_mirror_cli_2(self):
-        parser = mirror.cli.generate_mirror_cli(self.subcommand_populators)
+        parser = argparse.ArgumentParser()
+        mirror.cli.populate_cli(parser, self.subcommand_populators)
         with self.assertRaises(SystemExit):
             args = parser.parse_args([self.subcommand, 'rofl'])
 
     def test_generate_mirror_cli_3(self):
-        parser = mirror.cli.generate_mirror_cli(self.subcommand_populators)
+        parser = argparse.ArgumentParser()
+        mirror.cli.populate_cli(parser, self.subcommand_populators)
         with self.assertRaises(SystemExit):
             args = parser.parse_args([self.subcommand, '--opt-a', 'lol'])
 
     def test_generate_mirror_cli_4(self):
-        parser = mirror.cli.generate_mirror_cli(self.subcommand_populators)
+        parser = argparse.ArgumentParser()
+        mirror.cli.populate_cli(parser, self.subcommand_populators)
         args = parser.parse_args([self.subcommand, '--opt-a', 'lol', 'rofl', '--opt-c'])
         self.assertEqual(args.opt_a, 'lol')
         self.assertIsNone(args.opt_b)

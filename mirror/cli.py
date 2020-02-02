@@ -6,14 +6,17 @@ subcommands.
 import argparse
 from typing import Callable, Dict
 
-def generate_mirror_cli(
+def populate_cli(
+        parser: argparse.ArgumentParser,
         subcommand_populators: Dict[str, Callable[[argparse.ArgumentParser], None]]
-    ) -> argparse.ArgumentParser:
+    ) -> None:
     """
-    Generates an argparse.ArgumentParser which can be used to process mirror commands from the
-    command line
+    Populates an argparse.ArgumentParser instance with the given subcommands
+
+    This function can be used by submodules
 
     Args:
+
     subcommand_populators
         Dictionary whose keys are subcommands and whose values are functions which populate the
         subcommand parsers with their arguments (these should be exported by the submodule
@@ -21,14 +24,15 @@ def generate_mirror_cli(
 
     Returns: argparse.ArgumentParser object
     """
-    parser = argparse.ArgumentParser('mirror - Tools for analyzing software projects')
     subcommand_parsers = parser.add_subparsers()
 
     for subcommand, populator in subcommand_populators.items():
         subparser = subcommand_parsers.add_parser(subcommand)
         populator(subparser)
 
-    return parser
-
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser('mirror - Tools for software project analysis')
+    populate_cli(parser)
+
     args = parser.parse_args()
+    args.func(args)
