@@ -78,6 +78,40 @@ def crawl(start_id: int, max_id: int, interval: float, min_rate_limit: int) -> D
 
     return result
 
+def crawl_handler(args: argparse.Namespace) -> None:
+    """
+    Processes arguments as parsed from the command line and uses them to run a crawl of the GitHub
+    /repositories endpoint.
+
+    Results are stored as JSON file in the output directory specified in the arguments.
+
+    Args:
+    args
+        argparse.Namespace object containing commands to the allrepos command parser passed from
+        command line
+
+    Returns: None
+    """
+    next_id = nextid(args.crawldir)
+    current_max = max(args.start_id, next_id)
+    while current_max < args.max_id:
+        result = crawl(
+            current_max,
+            min(current_max + args.batch_size, args.max_id),
+            args.interval,
+            args.min_rate_limit,
+        )
+        outfile = os.path.join(args.crawldir, f'{current_max}.json')
+        with open(outfile, 'w') as ofp:
+            json.dump(result, ofp)
+
+        if len(result['data']) == 0:
+            break
+        current_max = result['data'][-1]['id']
+
+        if result['ending_rate_limit'] < args.min_rate_limit:
+            break
+
 def crawl_populator(parser: argparse.ArgumentParser) -> None:
     """
     Populates parser with crawl parameters
@@ -132,7 +166,8 @@ def crawl_populator(parser: argparse.ArgumentParser) -> None:
     parser.set_defaults(func=crawl_handler)
 
 def nextid(crawldir: str) -> int:
-    """ Given a directory containing only JSON files produced by an allrepos crawl, this function
+    """
+    Given a directory containing only JSON files produced by an allrepos crawl, this function
     returns the maximum ID seen in that crawl.
 
     Args:
@@ -157,6 +192,37 @@ def nextid(crawldir: str) -> int:
         return index
     return result['data'][-1]['id']
 
+def nextid_handler(args: argparse.Namespace) -> None:
+    """
+    Prints ID of most recent repository crawled and written to the crawldir parsed into the given
+    argparse args object.
+
+    Args:
+    args
+        Namespace containing arguments parsed from command line
+
+    Returns: None. Prints most recent repository ID to screen.
+    """
+    print(nextid(args.crawldir))
+
+def nextid_populator(parser: argparse.ArgumentParser) -> None:
+    """
+    Populates parser with nextid parameters
+
+    Args:
+    parser
+        Argument parser representing nextid functionality
+
+    Returns: None
+    """
+    parser.add_argument(
+        '--crawldir',
+        '-d',
+        required=True,
+        help='Path to directory in which crawl results should be written',
+    )
+    parser.set_defaults(func=nextid_handler)
+
 def populator(parser: argparse.ArgumentParser) -> None:
     """
     Populates parser with allrepos and children
@@ -169,39 +235,6 @@ def populator(parser: argparse.ArgumentParser) -> None:
     """
     subcommands: Dict[str, Callable[[argparse.ArgumentParser], None]] = {
         'crawl': crawl_populator,
+        'nextid': nextid_populator,
     }
     populate_cli(parser, subcommands)
-
-def crawl_handler(args: argparse.Namespace) -> None:
-    """
-    Processes arguments as parsed from the command line and uses them to run a crawl of the GitHub
-    /repositories endpoint.
-
-    Results are stored as JSON file in the output directory specified in the arguments.
-
-    Args:
-    args
-        argparse.Namespace object containing commands to the allrepos command parser passed from
-        command line
-
-    Returns: None
-    """
-    next_id = nextid(args.crawldir)
-    current_max = max(args.start_id, next_id)
-    while current_max < args.max_id:
-        result = crawl(
-            current_max,
-            min(current_max + args.batch_size, args.max_id),
-            args.interval,
-            args.min_rate_limit,
-        )
-        outfile = os.path.join(args.crawldir, f'{current_max}.json')
-        with open(outfile, 'w') as ofp:
-            json.dump(result, ofp)
-
-        if len(result['data']) == 0:
-            break
-        current_max = result['data'][-1]['id']
-
-        if result['ending_rate_limit'] < args.min_rate_limit:
-            break
