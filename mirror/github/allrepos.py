@@ -230,6 +230,15 @@ def sample(crawldir: str, choose_probability: float) -> Iterator[Dict[str, Any]]
     Given a directory containing only JSON files produced by an allrepos crawl, this generator
     yields the next sample.
 
+    NOTE: Not what I expected, but much faster than the following command:
+    $ cat ~/data/mirror/allrepos/*.json | \
+        jq -rc ".data[]" | \
+        awk 'BEGIN {srand()} !/^$/ { if (rand() <= 0.01) print $0 }' \
+        >outfile.jsonl
+
+    awk bit comes from here:
+    https://stackoverflow.com/questions/692312/randomly-pick-lines-from-a-file-without-slurping-it-with-unix
+
     Args:
     crawldir
         Output directory for an allrepos crawl
