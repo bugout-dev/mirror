@@ -8,8 +8,10 @@ import argparse
 import json
 import glob
 import os
+import random
+import sys
 import time
-from typing import Any, Callable, Dict, List, Optional, TextIO
+from typing import Any, Callable, Dict, Iterator, List, Optional, TextIO
 
 import requests
 
@@ -223,6 +225,80 @@ def nextid_populator(parser: argparse.ArgumentParser) -> None:
     )
     parser.set_defaults(func=nextid_handler)
 
+def sample(crawldir: str, choose_probability: float) -> Iterator[Dict[str, Any]]:
+    """
+    Given a directory containing only JSON files produced by an allrepos crawl, this generator
+    yields the next sample.
+
+    Args:
+    crawldir
+        Output directory for an allrepos crawl
+    choose_probability
+        Probability with which any single document is chosen for the sample
+
+    Returns: JSON array containing the sampled repositories
+    """
+    assert 0 <= choose_probability <= 1
+
+    crawl_batches = glob.glob(os.path.join(crawldir, '*.json'))
+    for batch in crawl_batches:
+        with open(batch, 'r') as ifp:
+            result = json.load(ifp)
+        for repository in result['data']:
+            if random.random() < choose_probability:
+                yield repository
+
+def sample_handler(args: argparse.Namespace) -> None:
+    """
+    Writes repositories sampled from a crawl directory to an output file in JSON lines format
+
+    Args:
+    args
+        Namespace containing arguments parsed from command line
+
+    Returns: None
+    """
+    ofp = sys.stdout
+    if args.outfile is not None:
+        ofp = open(args.outfile, 'w')
+
+    try:
+        samples = sample(args.crawldir, args.probability)
+        for repository in samples:
+            print(json.dumps(repository), file=ofp)
+    finally:
+        ofp.close()
+
+def sample_populator(parser: argparse.ArgumentParser) -> None:
+    """
+    Populates parser with nextid parameters
+
+    Args:
+    parser
+        Argument parser representing nextid functionality
+
+    Returns: None
+    """
+    parser.add_argument(
+        '--crawldir',
+        '-d',
+        required=True,
+        help='Path to directory in which crawl results should be written',
+    )
+    parser.add_argument(
+        '--outfile',
+        '-o',
+        help='Path to file to which samples should be written (default: stdout)',
+    )
+    parser.add_argument(
+        '--probability',
+        '-p',
+        type=float,
+        required=True,
+        help='Probability with which a repository in the crawl directory should be chosen',
+    )
+    parser.set_defaults(func=sample_handler)
+
 def populator(parser: argparse.ArgumentParser) -> None:
     """
     Populates parser with allrepos and children
@@ -236,5 +312,6 @@ def populator(parser: argparse.ArgumentParser) -> None:
     subcommands: Dict[str, Callable[[argparse.ArgumentParser], None]] = {
         'crawl': crawl_populator,
         'nextid': nextid_populator,
+        'sample': sample_populator,
     }
     populate_cli(parser, subcommands)
