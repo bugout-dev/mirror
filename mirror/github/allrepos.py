@@ -5,6 +5,7 @@ Support checkpointing against a small state object - the integer ID of the last 
 """
 
 import argparse
+import csv
 import json
 import glob
 import os
@@ -334,16 +335,75 @@ def sample_populator(parser: argparse.ArgumentParser) -> None:
     )
     parser.set_defaults(func=sample_handler)
 
-def forkstats(crawldir: str) -> List[Dict[str, Any]]:
+def stats_handler(args: argparse.Namespace) -> None:
     """
-    Compile statistics on number of forks in an allrepos crawl
+    Compile statistics on /repositories metadata in the given crawl
 
     Args:
-    crawldir
-        Directory into which the results of an allrepos crawl have been written
+    args
+        argparse.Namespace representing arguments parsed from command line. This Namespace is
+        expected to have two members - crawldir, outfile. The stats handler writes data into the
+        outfile as CSV of the form
+        repository_id,url,username,is_fork,cumulative_num_forks,cumulative_num_repos
+        where the cumulative numbers are cumulated up to (and including) the repository with that
+        id.
 
-    Returns: Dictionary representing the fork statistics of the crawl
+
+    Returns: None
     """
+    num_repos = 0
+    num_forks = 0
+
+    ordered_results = ordered_crawl(args.crawldir)
+
+    with open(args.outfile, 'w', newline='') as ofp:
+        statswriter = csv.writer(ofp, delimiter=',')
+        statswriter.writerow(
+            [
+                'repository_id',
+                'url',
+                'username',
+                'is_fork',
+                'cumulative_num_forks',
+                'cumulative_num_repos',
+            ]
+        )
+        for rfile, _ in tqdm(ordered_results):
+            with open(rfile, 'r') as ifp:
+                results = json.load(ifp)
+            rows: List[List[Any]] = []
+            for repository in results.get('data', []):
+                num_repos += 1
+                is_fork = repository.get('fork', False)
+                num_forks += (is_fork is True)
+                username = repository.get('owner', {}).get('login')
+                repository_id = repository.get('id')
+                url = repository.get('html_url')
+                rows.append([repository_id, url, username, is_fork, num_forks, num_repos])
+            statswriter.writerows(rows)
+
+def stats_populator(parser: argparse.ArgumentParser) -> None:
+    """
+    Populates parser with stats parameters
+
+    Args:
+    parser
+        Argument parser representing stats functionality
+
+    Returns: None
+    """
+    parser.add_argument(
+        '--crawldir',
+        '-d',
+        required=True,
+        help='Path to directory in which crawl results have been written',
+    )
+    parser.add_argument(
+        '--outfile',
+        '-o',
+        help='Path to file to which stats should be written',
+    )
+    parser.set_defaults(func=stats_handler)
 
 def populator(parser: argparse.ArgumentParser) -> None:
     """
@@ -359,5 +419,6 @@ def populator(parser: argparse.ArgumentParser) -> None:
         'crawl': crawl_populator,
         'nextid': nextid_populator,
         'sample': sample_populator,
+        'stats': stats_populator,
     }
     populate_cli(parser, subcommands)
