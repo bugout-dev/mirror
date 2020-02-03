@@ -11,7 +11,7 @@ import os
 import random
 import sys
 import time
-from typing import Any, Callable, Dict, Iterator, List, Optional, TextIO
+from typing import Any, Callable, Dict, Iterator, List, Optional, TextIO, Tuple
 
 import requests
 from tqdm import tqdm
@@ -168,7 +168,7 @@ def crawl_populator(parser: argparse.ArgumentParser) -> None:
     )
     parser.set_defaults(func=crawl_handler)
 
-def ordered_crawl(crawldir: str) -> List[str]:
+def ordered_crawl(crawldir: str) -> List[Tuple[str, int]]:
     """
     Returns the contents of the given crawl directory ordered by their start id (in ascending order)
 
@@ -177,7 +177,8 @@ def ordered_crawl(crawldir: str) -> List[str]:
         Directory containing the results of an allrepos crawl
 
     Returns: List of crawl results in the given crawldir, ordered by the start ID for the crawl
-    step they represent
+    step they represent. Returns the start_id of each result file as the second coordinate of each
+    tuple in the return list.
     """
     result_files = glob.glob(os.path.join(crawldir, '*.json'))
     if not result_files:
@@ -188,8 +189,7 @@ def ordered_crawl(crawldir: str) -> List[str]:
             int(os.path.basename(rfile).split('.')[0])
         ) for rfile in result_files
     ]
-    ordered_results = [rfile for rfile, _ in sorted(indexed_result_files, key=lambda p: p[1])]
-    return ordered_results
+    return sorted(indexed_result_files, key=lambda p: p[1])
 
 def nextid(crawldir: str) -> int:
     """
@@ -333,6 +333,17 @@ def sample_populator(parser: argparse.ArgumentParser) -> None:
         help='Probability with which a repository in the crawl directory should be chosen',
     )
     parser.set_defaults(func=sample_handler)
+
+def forkstats(crawldir: str) -> List[Dict[str, Any]]:
+    """
+    Compile statistics on number of forks in an allrepos crawl
+
+    Args:
+    crawldir
+        Directory into which the results of an allrepos crawl have been written
+
+    Returns: Dictionary representing the fork statistics of the crawl
+    """
 
 def populator(parser: argparse.ArgumentParser) -> None:
     """

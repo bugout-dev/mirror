@@ -28,10 +28,15 @@ class TestOrderedCrawl(unittest.TestCase):
                 pass
             files.append(new_file)
 
-        ordered_start_ids = sorted(start_ids)
         ordered_results = allrepos.ordered_crawl(self.tempdir)
-        for i, rfile in enumerate(ordered_results):
-            self.assertEqual(rfile, os.path.join(self.tempdir, f'{ordered_start_ids[i]}.json'))
+        self.assertListEqual(
+            ordered_results,
+            [
+                (os.path.join(self.tempdir, '1.json'), 1),
+                (os.path.join(self.tempdir, '13.json'), 13),
+                (os.path.join(self.tempdir, '99.json'), 99),
+            ],
+        )
 
     def test_ordered_crawl_2(self):
         ordered_results = allrepos.ordered_crawl(self.tempdir)
