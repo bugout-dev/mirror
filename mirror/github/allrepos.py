@@ -168,6 +168,29 @@ def crawl_populator(parser: argparse.ArgumentParser) -> None:
     )
     parser.set_defaults(func=crawl_handler)
 
+def ordered_crawl(crawldir: str) -> List[str]:
+    """
+    Returns the contents of the given crawl directory ordered by their start id (in ascending order)
+
+    Args:
+    crawldir
+        Directory containing the results of an allrepos crawl
+
+    Returns: List of crawl results in the given crawldir, ordered by the start ID for the crawl
+    step they represent
+    """
+    result_files = glob.glob(os.path.join(crawldir, '*.json'))
+    if not result_files:
+        return []
+    indexed_result_files = [
+        (
+            rfile,
+            int(os.path.basename(rfile).split('.')[0])
+        ) for rfile in result_files
+    ]
+    ordered_results = [rfile for rfile, _ in sorted(indexed_result_files, key=lambda p: p[1])]
+    return ordered_results
+
 def nextid(crawldir: str) -> int:
     """
     Given a directory containing only JSON files produced by an allrepos crawl, this function
@@ -283,11 +306,11 @@ def sample_handler(args: argparse.Namespace) -> None:
 
 def sample_populator(parser: argparse.ArgumentParser) -> None:
     """
-    Populates parser with nextid parameters
+    Populates parser with sample parameters
 
     Args:
     parser
-        Argument parser representing nextid functionality
+        Argument parser representing sample functionality
 
     Returns: None
     """
