@@ -53,7 +53,7 @@ def crawl(start_id: int, max_id: int, interval: float, min_rate_limit: int) -> D
         'User-Agent': 'simiotics mirror',
     }
     github_token = os.environ.get('GITHUB_TOKEN')
-    if github_token is not None:
+    if github_token is not None and github_token != '':
         headers['Authorization'] = f'token {github_token}'
 
     since = start_id
