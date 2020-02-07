@@ -50,6 +50,7 @@ def crawl(start_id: int, max_id: int, interval: float, min_rate_limit: int) -> D
     }
 
     headers = {
+        'Accept': 'application/vnd.github.v3+json',
         'User-Agent': 'simiotics mirror',
     }
     github_token = os.environ.get('GITHUB_TOKEN')
