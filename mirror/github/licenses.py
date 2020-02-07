@@ -7,7 +7,7 @@ import json
 import os
 import sys
 import time
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import requests
 from tqdm import tqdm
@@ -65,8 +65,13 @@ def licenses_handler(args: argparse.Namespace) -> None:
     Returns: None, prints license information for the repositories in args.repos to stdout or to the
     file specified by args.outfile
     """
-    repos = args.repos.split(',')
-    print(repos)
+    repos: List[str] = []
+    if args.repos[:len('file:')] == 'file:':
+        infile = args.repos[len('file:'):]
+        with open(infile, 'r') as ifp:
+            repos = json.load(ifp)
+    else:
+        repos = args.repos.split(',')
 
     ofp = sys.stdout
     if args.outfile is not None:
@@ -97,7 +102,10 @@ def populator(parser: argparse.ArgumentParser) -> None:
         '-r',
         type=str,
         required=True,
-        help='Comma-separated list of GitHub API URLs of repos',
+        help=(
+            'File with JSON array of GitHub API URLs for repos (if value is "file:<filename>") '
+            'OR comma-separated list of GitHub API URLs of repos'
+        ),
     )
     parser.add_argument(
         '--interval',
