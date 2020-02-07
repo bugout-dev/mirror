@@ -250,6 +250,80 @@ def nextid_populator(parser: argparse.ArgumentParser) -> None:
     )
     parser.set_defaults(func=nextid_handler)
 
+def validate(crawldir: str) -> List[Tuple[int, int]]:
+    """
+    Given a directory containing only JSON files produced by an allrepos crawl, this function
+    validates that there are no holes in the crawled data
+
+    Args:
+    crawldir
+        Output directory for an allrepos crawl
+
+    Returns: List of (start_id, max_id) pairs that are missing from the crawl
+    """
+    result_files = ordered_crawl(crawldir)
+    if len(result_files) <= 1:
+        return []
+
+    missing_ranges: List[Tuple[int, int]] = []
+
+    for i, pair in enumerate(tqdm(result_files[:-1])):
+        result_file, this_id = pair
+        with open(result_file, 'r') as ifp:
+            result = json.load(ifp)
+        _, next_id = result_files[i+1]
+        if not result.get('data'):
+            missing_ranges.append((this_id, next_id))
+            continue
+        max_id = result['data'][-1].get('id', -1)
+        if max_id != next_id:
+            missing_ranges.append((max_id, next_id))
+
+    return missing_ranges
+
+def validate_handler(args: argparse.Namespace) -> None:
+    """
+    Prints ID of most recent repository crawled and written to the crawldir parsed into the given
+    argparse args object.
+
+    Args:
+    args
+        Namespace containing arguments parsed from command line
+
+    Returns: None. Prints most recent repository ID to screen.
+    """
+    ofp = sys.stdout
+    if args.outfile is not None:
+        ofp = open(args.outfile, 'w')
+    json.dump(validate(args.crawldir), ofp)
+    if args.outfile is not None:
+        ofp.close()
+
+def validate_populator(parser: argparse.ArgumentParser) -> None:
+    """
+    Populates parser with validate parameters
+
+    Args:
+    parser
+        Argument parser representing validate functionality
+
+    Returns: None
+    """
+    parser.add_argument(
+        '--crawldir',
+        '-d',
+        required=True,
+        help='Path to directory in which crawl results should be written',
+    )
+    parser.add_argument(
+        '--outfile',
+        '-o',
+        required=False,
+        help='Path to file into which validation output should be written',
+    )
+    parser.set_defaults(func=validate_handler)
+
+
 def sample(crawldir: str, choose_probability: float) -> Iterator[Dict[str, Any]]:
     """
     Given a directory containing only JSON files produced by an allrepos crawl, this generator
@@ -420,5 +494,6 @@ def populator(parser: argparse.ArgumentParser) -> None:
         'nextid': nextid_populator,
         'sample': sample_populator,
         'stats': stats_populator,
+        'validate': validate_populator,
     }
     populate_cli(parser, subcommands)
