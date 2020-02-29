@@ -80,11 +80,11 @@ def parse_repository_metadata(
     try:
         parsed_metadata['id'] = metadata['id']
         parsed_metadata['full_name'] = metadata['full_name']
-        parsed_metadata['owner_login'] = metadata.get('owner', {})['login']
+        parsed_metadata['owner_login'] = metadata['owner']['login']
         parsed_metadata['html_url'] = metadata['html_url']
         parsed_metadata['url'] = metadata['url']
         parsed_metadata['fork'] = metadata['fork']
-    except KeyError as err:
+    except Exception as err:
         return (
             parsed_metadata,
             SyncParseError('Corruption: {} - {}'.format(result_file, repr(err))),
