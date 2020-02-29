@@ -6,6 +6,7 @@ import argparse
 from datetime import datetime, timezone
 import json
 import sqlite3
+import sys
 from typing import Any, Dict, Iterator, List, Tuple
 
 from tqdm import tqdm
@@ -123,6 +124,10 @@ def sync(conn: sqlite3.Connection, results: Iterator[Dict[str, Any]], batch_size
     batch = []
     github_id = -1
     for item in tqdm(results):
+        if item is None:
+            print('Received None in result iteration', file=sys.stderr)
+            continue
+
         parsed_item = (
             item['id'],
             item['full_name'],
