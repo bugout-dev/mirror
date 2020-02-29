@@ -91,7 +91,7 @@ def unsynced_results(
     if cutoff == len(results)-1:
         return None
 
-    for result_file, _ in tqdm(results[cutoff+1:]):
+    for result_file, _ in results[cutoff+1:]:
         with open(result_file, 'r') as ifp:
             crawl_result = json.load(ifp)
         for item in crawl_result.get('data', []):
@@ -122,7 +122,7 @@ def sync(conn: sqlite3.Connection, results: Iterator[Dict[str, Any]], batch_size
     synced = 0
     batch = []
     github_id = -1
-    for item in results:
+    for item in tqdm(results):
         parsed_item = (
             item['id'],
             item['full_name'],
@@ -166,7 +166,7 @@ def handler(args: argparse.Namespace) -> None:
 
         results = ordered_crawl(args.crawldir)
         tasks = unsynced_results(conn, results)
-        sync(conn, tasks, args.batch_size)
+        print(sync(conn, tasks, args.batch_size))
     finally:
         conn.close()
 
