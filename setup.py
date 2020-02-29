@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 VERSION = '0.1.1'
 
 setup(
-    name='dungineers-mirror',
+    name='simiotics-mirror',
     version=VERSION,
     packages=find_packages(),
     install_requires=[
