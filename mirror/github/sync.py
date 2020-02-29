@@ -1,0 +1,209 @@
+"""
+Synchronize repository metadata into a SQLite database
+"""
+
+import argparse
+from datetime import datetime, timezone
+import json
+import sqlite3
+from typing import Any, Dict, Iterator, List, Tuple
+
+from tqdm import tqdm
+
+from .allrepos import ordered_crawl
+
+def setup_database(conn: sqlite3.Connection) -> None:
+    """
+    Sets up a SQLite3 database to be the target of a synchronization operation. This means creating:
+    - repositories table to hold repository metadata
+    - history table to hold synchronization history
+
+    Args:
+    conn
+        Open connection to SQLite database
+
+    Returns: None
+    """
+
+    create_repositories = """
+    CREATE TABLE IF NOT EXISTS repositories (
+        github_id UNSIGNED BIG INT,
+        full_name TEXT NOT NULL,
+        owner TEXT NOT NULL,
+        html_url TEXT NOT NULL,
+        api_url TEXT NOT NULL,
+        is_fork BOOLEAN
+    );
+    """
+
+    create_history = """
+    CREATE TABLE IF NOT EXISTS history (
+        github_id UNSIGNED BIG INT NOT NULL,
+        synced_at DATETIME NOT NULL
+    );
+    """
+
+    c = conn.cursor()
+    c.execute(create_repositories)
+    c.execute(create_history)
+    conn.commit()
+
+def unsynced_results(
+        conn: sqlite3.Connection,
+        results: List[Tuple[str, int]]
+    ) -> Iterator[Dict[str, Any]]:
+    """
+    Given a sorted list of items in a crawl directory (as returned by allrepos.ordered_crawl),
+    iterates over the entries that need to be synchronized into the given database.
+
+    Args:
+    conn
+        Open connection to SQLite database
+    results
+        Results as returned by allrepos.ordered_crawl
+
+    Yields: Dictionaries representing individual repositories to be synchronized into database
+    """
+    last_id = -1
+    c = conn.cursor()
+    selector = 'SELECT MAX(github_id) FROM history;'
+    c.execute(selector)
+    r = c.fetchone()
+    if r[0] is not None:
+        last_id = r[0]
+
+    cutoff = -1
+    for i, result in enumerate(results):
+        if result[1] <= last_id:
+            cutoff = i
+        else:
+            break
+
+    if cutoff > -1:
+        result_file, _ = results[cutoff]
+        with open(result_file, 'r') as ifp:
+            crawl_result = json.load(ifp)
+        data = crawl_result.get('data', [])
+        for item in data:
+            if item.get('id', -1) > last_id:
+                yield item
+
+    if cutoff == len(results)-1:
+        return None
+
+    for result_file, _ in tqdm(results[cutoff+1:]):
+        with open(result_file, 'r') as ifp:
+            crawl_result = json.load(ifp)
+        for item in crawl_result.get('data', []):
+            yield item
+
+def sync(conn: sqlite3.Connection, results: Iterator[Dict[str, Any]], batch_size: int) -> int:
+    """
+    Synchronizes a list of results from a github crawl into the SQLite database represented by the
+    given connection.
+
+    Args:
+    conn
+        Open connection to SQLite database
+    results
+        List of paths to crawl result files from which to sync to the database
+
+    Returns: None
+    """
+    c = conn.cursor()
+
+    insertion = """
+    INSERT INTO repositories(github_id, full_name, owner, html_url, api_url, is_fork)
+    VALUES (?, ?, ?, ?, ?, ?)
+    """
+
+    update_history = 'INSERT INTO history(github_id, synced_at) VALUES (?, ?)'
+
+    synced = 0
+    batch = []
+    github_id = -1
+    for item in results:
+        parsed_item = (
+            item['id'],
+            item['full_name'],
+            item.get('owner', {}).get('login'),
+            item['html_url'],
+            item['url'],
+            item['fork'],
+        )
+        batch.append(parsed_item)
+        github_id = item['id']
+
+        if len(batch) % batch_size == 0:
+            c.executemany(insertion, batch)
+            c.execute(update_history, (github_id, datetime.now(tz=timezone.utc)))
+            conn.commit()
+            batch = []
+            synced += batch_size
+
+    if batch:
+        c.executemany(insertion, batch)
+        c.execute(update_history, (github_id, datetime.now(tz=timezone.utc)))
+        conn.commit()
+        synced += len(batch)
+
+    return synced
+
+def handler(args: argparse.Namespace) -> None:
+    """
+    CLI handler for sync functionality
+
+    Args:
+    args
+        Argparse namespace containing parsed command line arguments
+
+    Returns: None
+    """
+    conn = sqlite3.connect(args.database)
+    try:
+        if args.setup:
+            setup_database(conn)
+
+        results = ordered_crawl(args.crawldir)
+        tasks = unsynced_results(conn, results)
+        sync(conn, tasks, args.batch_size)
+    finally:
+        conn.close()
+
+def populator(parser: argparse.ArgumentParser) -> None:
+    """
+    Populates a CLI parser with sync parameters
+
+    Args:
+    parser
+        Argument parser representing sync functionality
+
+    Returns: None
+    """
+    parser.add_argument(
+        '--setup',
+        action='store_true',
+        help='If set, creates the relevant tables in the given database',
+    )
+    parser.add_argument(
+        '--crawldir',
+        '-d',
+        type=str,
+        required=True,
+        help='Path to directory containing results of a GitHub crawl',
+    )
+    parser.add_argument(
+        '--batch-size',
+        '-b',
+        type=int,
+        default=1000,
+        help='Number of repositories to sync at a time (database transaction batching)',
+    )
+    parser.add_argument(
+        '--database',
+        '-o',
+        type=str,
+        required=True,
+        help='Path to database file',
+    )
+    parser.set_defaults(func=handler)

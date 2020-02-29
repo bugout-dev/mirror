@@ -428,21 +428,3 @@ def sample_populator(parser: argparse.ArgumentParser) -> None:
         help='Probability with which a repository in the crawl directory should be chosen',
     )
     parser.set_defaults(func=sample_handler)
-
-def populator(parser: argparse.ArgumentParser) -> None:
-    """
-    Populates parser with allrepos and children
-
-    Args:
-    parser
-        Argument parser representing allrepos functionality
-
-    Returns: None
-    """
-    subcommands: Dict[str, Callable[[argparse.ArgumentParser], None]] = {
-        'crawl': crawl_populator,
-        'nextid': nextid_populator,
-        'sample': sample_populator,
-        'validate': validate_populator,
-    }
-    populate_cli(parser, subcommands)
