@@ -45,6 +45,7 @@ qtconsole==4.7.0
 QtPy==1.9.0
 requests==2.22.0
 Send2Trash==1.5.0
+-e git+git@github.com:simiotics/mirror.git@69357664403e9114d7ae148df325ecac654f9602#egg=simiotics_mirror
 six==1.14.0
 terminado==0.8.3
 testpath==0.4.4
