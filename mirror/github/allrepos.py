@@ -8,6 +8,7 @@ import argparse
 import csv
 import json
 import glob
+import multiprocessing
 import os
 import random
 import sys
@@ -63,7 +64,7 @@ def crawl(start_id: int, max_id: int, interval: float, min_rate_limit: int) -> D
         time.sleep(interval)
         r = requests.get(REPOSITORIES_URL, params={'since': since}, headers=headers)
         response_body = r.json()
-        if len(response_body) == 0:
+        if not response_body:
             break
 
         result['data'].extend(response_body) # type: ignore
@@ -251,28 +252,27 @@ def nextid_populator(parser: argparse.ArgumentParser) -> None:
     )
     parser.set_defaults(func=nextid_handler)
 
-def validate(crawldir: str) -> List[Tuple[int, int]]:
+def validate(result_range: List[Tuple[str, int]]) -> List[Tuple[int, int]]:
     """
     Given a directory containing only JSON files produced by an allrepos crawl, this function
     validates that there are no holes in the crawled data
 
     Args:
-    crawldir
-        Output directory for an allrepos crawl
+    result_range
+        Contiguous list of results as returned by an ordered_crawl
 
-    Returns: List of (start_id, max_id) pairs that are missing from the crawl
+    Returns: List of (start_id, max_id) pairs that are missing from the given range
     """
-    result_files = ordered_crawl(crawldir)
-    if len(result_files) <= 1:
+    if len(result_range) <= 1:
         return []
 
     missing_ranges: List[Tuple[int, int]] = []
 
-    for i, pair in enumerate(tqdm(result_files[:-1])):
+    for i, pair in enumerate(result_range[:-1]):
         result_file, this_id = pair
         with open(result_file, 'r') as ifp:
             result = json.load(ifp)
-        _, next_id = result_files[i+1]
+        _, next_id = result_range[i+1]
         if not result.get('data'):
             missing_ranges.append((this_id, next_id))
             continue
@@ -296,7 +296,19 @@ def validate_handler(args: argparse.Namespace) -> None:
     ofp = sys.stdout
     if args.outfile is not None:
         ofp = open(args.outfile, 'w')
-    json.dump(validate(args.crawldir), ofp)
+    invalid = []
+
+    result_files = ordered_crawl(args.crawldir)
+    if len(result_files) > 1:
+        concurrency = args.num_processes
+        if concurrency > len(result_files) - 1:
+            concurrency = len(result_files) - 1
+        worker_pool = multiprocessing.Pool(concurrency)
+        segment_size = int((len(result_files) - 1)/concurrency) + 1
+        ranges = [result_files[i*segment_size:(i+1)*segment_size + 1] for i in range(concurrency)]
+        invalid = [range for results in worker_pool.map(validate, ranges) for range in results]
+
+    json.dump(invalid, ofp)
     if args.outfile is not None:
         ofp.close()
 
@@ -315,6 +327,13 @@ def validate_populator(parser: argparse.ArgumentParser) -> None:
         '-d',
         required=True,
         help='Path to directory in which crawl results should be written',
+    )
+    parser.add_argument(
+        '--num-processes',
+        '-p',
+        type=int,
+        default=1,
+        help='Number of processes to use when performing validation',
     )
     parser.add_argument(
         '--outfile',
@@ -409,92 +428,3 @@ def sample_populator(parser: argparse.ArgumentParser) -> None:
         help='Probability with which a repository in the crawl directory should be chosen',
     )
     parser.set_defaults(func=sample_handler)
-
-def stats_handler(args: argparse.Namespace) -> None:
-    """
-    Compile statistics on /repositories metadata in the given crawl
-
-    Args:
-    args
-        argparse.Namespace representing arguments parsed from command line. This Namespace is
-        expected to have two members - crawldir, outfile. The stats handler writes data into the
-        outfile as CSV of the form
-        repository_id,url,username,is_fork,cumulative_num_forks,cumulative_num_repos
-        where the cumulative numbers are cumulated up to (and including) the repository with that
-        id.
-
-
-    Returns: None
-    """
-    num_repos = 0
-    num_forks = 0
-
-    ordered_results = ordered_crawl(args.crawldir)
-
-    with open(args.outfile, 'w', newline='') as ofp:
-        statswriter = csv.writer(ofp, delimiter=',')
-        statswriter.writerow(
-            [
-                'repository_id',
-                'url',
-                'username',
-                'is_fork',
-                'cumulative_num_forks',
-                'cumulative_num_repos',
-            ]
-        )
-        for rfile, _ in tqdm(ordered_results):
-            with open(rfile, 'r') as ifp:
-                results = json.load(ifp)
-            rows: List[List[Any]] = []
-            for repository in results.get('data', []):
-                num_repos += 1
-                is_fork = repository.get('fork', False)
-                num_forks += (is_fork is True)
-                username = repository.get('owner', {}).get('login')
-                repository_id = repository.get('id')
-                url = repository.get('html_url')
-                rows.append([repository_id, url, username, is_fork, num_forks, num_repos])
-            statswriter.writerows(rows)
-
-def stats_populator(parser: argparse.ArgumentParser) -> None:
-    """
-    Populates parser with stats parameters
-
-    Args:
-    parser
-        Argument parser representing stats functionality
-
-    Returns: None
-    """
-    parser.add_argument(
-        '--crawldir',
-        '-d',
-        required=True,
-        help='Path to directory in which crawl results have been written',
-    )
-    parser.add_argument(
-        '--outfile',
-        '-o',
-        help='Path to file to which stats should be written',
-    )
-    parser.set_defaults(func=stats_handler)
-
-def populator(parser: argparse.ArgumentParser) -> None:
-    """
-    Populates parser with allrepos and children
-
-    Args:
-    parser
-        Argument parser representing allrepos functionality
-
-    Returns: None
-    """
-    subcommands: Dict[str, Callable[[argparse.ArgumentParser], None]] = {
-        'crawl': crawl_populator,
-        'nextid': nextid_populator,
-        'sample': sample_populator,
-        'stats': stats_populator,
-        'validate': validate_populator,
-    }
-    populate_cli(parser, subcommands)
