@@ -344,7 +344,7 @@ def validate_populator(parser: argparse.ArgumentParser) -> None:
     parser.set_defaults(func=validate_handler)
 
 
-def sample(crawldir: str, choose_probability: float) -> Iterator[Dict[str, Any]]:
+def sample(crawl_batches: List[str], choose_probability: float) -> Iterator[Dict[str, Any]]:
     """
     Given a directory containing only JSON files produced by an allrepos crawl, this generator
     yields the next sample.
@@ -370,7 +370,6 @@ def sample(crawldir: str, choose_probability: float) -> Iterator[Dict[str, Any]]
     """
     assert 0 <= choose_probability <= 1
 
-    crawl_batches = glob.glob(os.path.join(crawldir, '*.json'))
     for batch in tqdm(crawl_batches, desc='batch'):
         with open(batch, 'r') as ifp:
             result = json.load(ifp)
@@ -388,16 +387,21 @@ def sample_handler(args: argparse.Namespace) -> None:
 
     Returns: None
     """
-    ofp = sys.stdout
-    if args.outfile is not None:
-        ofp = open(args.outfile, 'w')
+    # Validator for files containing crawl result batches
+    def is_valid(batch_item):
+        _, start_id = batch_item
+        if start_id < args.from_id:
+            return False
+        if args.to_id is not None and start_id > args.to_id:
+            return False
+        return True
 
-    try:
-        samples = sample(args.crawldir, args.probability)
+    with args.outfile as ofp:
+        ordered_batches = ordered_crawl(args.crawldir)
+        valid_batches = [batch[0] for batch in ordered_batches if is_valid(batch)]
+        samples = sample(valid_batches, args.probability)
         for repository in samples:
             print(json.dumps(repository), file=ofp)
-    finally:
-        ofp.close()
 
 def sample_populator(parser: argparse.ArgumentParser) -> None:
     """
@@ -418,6 +422,8 @@ def sample_populator(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         '--outfile',
         '-o',
+        type=argparse.FileType('w'),
+        default=sys.stdout,
         help='Path to file to which samples should be written (default: stdout)',
     )
     parser.add_argument(
@@ -426,5 +432,21 @@ def sample_populator(parser: argparse.ArgumentParser) -> None:
         type=float,
         required=True,
         help='Probability with which a repository in the crawl directory should be chosen',
+    )
+    parser.add_argument(
+        '--from-id',
+        type=int,
+        default=0,
+        help=(
+            'GitHub ID to begin sampling from (default: 0). Could have non-intuitive behavior '
+            'since it uses the id on the crawl batch file, and not the id on the repos themselves. '
+            'Uses the batch whose starting GitHub ID is the smallest one greater than --from-id.'
+        ),
+    )
+    parser.add_argument(
+        '--to-id',
+        type=int,
+        default=None,
+        help='GitHub ID to end sampling at (default: None)',
     )
     parser.set_defaults(func=sample_handler)
