@@ -89,7 +89,7 @@ def main(language, stars, path, format, token):
         os.makedirs(resolve_path)
 
 
-    # Hmm its working but how
+    # generate file path
     file_path = resolve_path / file_name
 
     file_modes = 'w+'
@@ -133,27 +133,26 @@ def main(language, stars, path, format, token):
                     'data':[]
                 }
         
-       
-        
+        # Put letter by letter to search query
+        # 
         for letter in list(string.ascii_lowercase):
 
             page =0
 
             try:
 
-                while True:
+                # limitation of search result
+                while len(alredy_parsed) != data['total_count'] or page <= 11:
+
                     # parsing block
 
                     repos = data['items']
 
-                    page += 1
-
-                    if len(alredy_parsed)==data['total_count'] or page == 11:
-                        break
 
                     for repo in repos:
 
                         if repo['id'] not in alredy_parsed:
+
                             if format == 'csv':
 
                                 repo_normalization = pd.json_normalize(repo, sep='_')
@@ -190,6 +189,7 @@ def main(language, stars, path, format, token):
                         break
                     
                     time.sleep(time_sleep)
+                    page += 1
             except:
                 traceback.print_exc()
 
