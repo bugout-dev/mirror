@@ -204,10 +204,10 @@ def sync(
 
 @click.command()
 @click.option('--setup', help='If set, creates the relevant tables in the given database')
-@click.option('--crawldir', '-d', type=str, help='Path to directory containing results of a GitHub crawl')
+@click.option('--crawldir', '-d', help='Path to directory containing results of a GitHub crawl')
 @click.option('--batch-size', '-b', type=int, default=1000, help='Number of repositories to sync at a time (database transaction batching)')
-@click.option('--database', '-o', type=str, help='Path to database file')
-def handler(**kwargs) -> None:
+@click.option('--database', '-o', help='Path to database file')
+def handler(setup: str, crawldir: str, batch_size: int, database: str) -> None:
     """
     CLI handler for sync functionality
 
@@ -217,13 +217,13 @@ def handler(**kwargs) -> None:
 
     Returns: None
     """
-    conn = sqlite3.connect(kwargs['database'])
+    conn = sqlite3.connect(database)
     try:
-        if kwargs['setup']:
+        if setup:
             setup_database(conn)
 
-        results = ordered_crawl(kwargs['crawldir'])
+        results = ordered_crawl(crawldir)
         tasks = unsynced_results(conn, results)
-        print(sync(conn, tasks, kwargs['batch_size']))
+        print(sync(conn, tasks, batch_size))
     finally:
         conn.close()

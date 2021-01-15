@@ -1,4 +1,4 @@
-import httpx
+import requests
 import re
 import click
 import os
@@ -21,7 +21,13 @@ import traceback
 @click.option('--stars', '-st', help='stars amount. 500 or >500 or <500')
 @click.option('--format', '-f', type=click.Choice(['csv', 'json'], case_sensitive=False), help='Output file format.')
 @click.option('--token', '-t', help='Access token for increase rate limit. Read from $github_token if specify.', default='')
-def main(language, stars, path, format, token):
+def popular_repos(language, stars, path, format, token):
+
+    """
+    Crawl via search api. Search api have limitation 1000 results per search quary.
+    For extract more results from search for each request we adding letters of the alphabet to the query parameter.
+
+    """
 
     click.echo(f'format-output: {format}')
 
@@ -60,7 +66,7 @@ def main(language, stars, path, format, token):
     search_url = f'https://api.github.com/search/repositories?q={init_search_expresion}&per_page=100'
     click.echo(f' initial request done {search_url}')
 
-    search_responce = httpx.get(search_url, headers=headers)
+    search_responce = requests.get(search_url, headers=headers)
 
     time.sleep(time_sleep)
 
@@ -178,7 +184,7 @@ def main(language, stars, path, format, token):
                     # new search
                     
                     request_url = f'https://api.github.com/search/repositories?q={search_expresion}&per_page=100&page={page}'
-                    search_responce = httpx.get(request_url, headers=headers)
+                    search_responce = requests.get(request_url, headers=headers)
 
                     if search_responce.status_code !=200:
                         break
@@ -198,9 +204,5 @@ def main(language, stars, path, format, token):
             print(f'Json: {len(json_data["data"])} repo collected.')
             json.dump(json_data, output_file)
         
-        
-
-#main('python', '>500', ".", 'json')
-
 if __name__ == "__main__":
-    main()
+    popular_repos()

@@ -67,7 +67,7 @@ def get_license(repo_api_url: str) -> Dict[str, Any]:
 
 @click.option('--outfile', '-o', default=30, help='File to which to write license information as JSON lines, one per repository')
 
-def licenses_handler(**kwargs) -> None:
+def licenses_handler(repos_json: str, interval: float, min_rate_limit: int, outfile: str) -> None:
     """
     Handler for licenses subcommand
 
@@ -80,23 +80,23 @@ def licenses_handler(**kwargs) -> None:
     file specified by args.outfile
     """
     repos: List[str] = []
-    if kwargs['repos'][:len('file:')] == 'file:':
-        infile = kwargs['repos'][len('file:'):]
+    if repos_json[:len('file:')] == 'file:':
+        infile = repos_json[len('file:'):]
         with open(infile, 'r') as ifp:
             repos = json.load(ifp)
     else:
-        repos = kwargs['repos'].split(',')
+        repos = repos_json.split(',')
 
     ofp = sys.stdout
-    if kwargs['outfile'] is not None:
-        ofp = open(kwargs['outfile'], 'w')
+    if outfile is not None:
+        ofp = open(outfile, 'w')
 
     for repo in repos:
-        time.sleep(kwargs['interval'])
+        time.sleep(interval)
         result = get_license(repo)
         print(json.dumps(result), file=ofp)
-        if result['ending_rate_limit'] < kwargs['min_rate_limit']:
+        if result['ending_rate_limit'] < min_rate_limit:
             break
 
-    if kwargs['outfile'] is not None:
+    if outfile is not None:
         ofp.close()

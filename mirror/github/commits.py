@@ -1,4 +1,4 @@
-import httpx
+import requests
 import re
 import click
 import os
@@ -50,7 +50,7 @@ def write_with_size(string,file_index, path):
 @click.option('--path', '-p', default='.', help='Path to save folder. default="." ')
 @click.option('--file', '-f', help='Input repos file.')
 @click.option('--token', '-t', help='Access token for increase rate limit. Read from $github_token if specify.', default='')
-def main(path,file,token):
+def main(path: str, file: str, token: str):
     token= os.environ.get('github_token', token)
 
     if token == '':
@@ -60,6 +60,7 @@ def main(path,file,token):
 
     source_file_path = Path(file)
     file_exist = source_file_path.is_file()
+    
     # load available repo
     if file_exist:
         with open(source_file_path, 'r') as repos_file:
@@ -98,7 +99,7 @@ def main(path,file,token):
             #request commits
             try:
 
-                commits_responce = httpx.get(repo['commits_url'].replace('{/sha}',''), headers=headers)
+                commits_responce = requests.get(repo['commits_url'].replace('{/sha}',''), headers=headers)
             except:
                 continue
 

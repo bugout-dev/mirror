@@ -10,12 +10,13 @@ import pandas as pd
 
 
 @click.command()
-@click.option('--path_input_folder', '-p', default='.', help='folders with repo/commits. default="." ')
-@click.option('--path_output_csv', '-f', help='Output csv normilize file.')
+@click.option('--json-files-folder', '-p', default='.', help='folders with repo/commits. default="." ')
+@click.option('--output-csv', '-f', help='Output csv normilize file.')
 @click.option('--command', '-t', help='specify wich type of content need extract.')
-def main(command, path_input_folder, path_output_csv):
+def json_files_to_csv(command: str, path_input_folder: str, path_output_csv: str):
     """
-    utils helper right now for csv propose
+    Generate one csv file from json files
+
     """
 
     inputs_path = Path(path_input_folder)
@@ -66,21 +67,14 @@ def main(command, path_input_folder, path_output_csv):
                 # list of repo
 
                 for repo in json_data:
-                    #print(list(repo.values())[0])
                     commits = list(repo.values())[0]
                     with open(output_file.resolve(), 'a', newline='') as output_csv:
-
-                        #print()
-                        #print()
-                        #print()
 
                         fieldnames = csv_headers
                         writer = csv.DictWriter(output_csv, fieldnames=fieldnames)
 
                         for commit in commits:
-                            #print(type(commit))
                             commit_normalization = pd.json_normalize(commit, sep='_')
-                            #print(type(commit_normalization))        
                             writer.writerow(commit_normalization.to_dict())
 
 if __name__ == "__main__":
