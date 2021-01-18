@@ -9,36 +9,47 @@ from pathlib import Path
 import pandas as pd
 import string
 import traceback
+from typing import Optional
 
 
+class Error(Exception):
+    """Base class for exceptions in this module."""
+    pass
 
 
-
+REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
 
 @click.command()
-@click.option('--path', '-p', default='.', help='Path to save folder. default="." ')
-@click.option('--language', '-l', help='language name search.')
-@click.option('--stars', '-st', help='stars amount. 500 or >500 or <500')
-@click.option('--format', '-f', type=click.Choice(['csv', 'json'], case_sensitive=False), help='Output file format.')
-@click.option('--token', '-t', help='Access token for increase rate limit. Read from $github_token if specify.', default='')
-def popular_repos(language, stars, path, format, token):
+@click.option('--crawldir', '-d', default='./', help='Path to save folder.', show_default=True)
+
+@click.option('--language', '-l', help='Language name for search.')
+
+@click.option('--stars_expression', '-st', help='Stars amount. "500" or ">500" or "<500"')
+
+@click.option('--format', '-f', type=click.Choice(['csv', 'json'], case_sensitive=False), help='Output file format.', default='json', show_default=True)
+
+@click.option('--token', '-t', help='Access token for increase rate limit. Read from env $github_token if specify.', default=None, show_default=True)
+def popular_repos(language: str, stars_expression: str, crawldir: str, format: str, token: Optional[str]):
 
     """
-    Crawl via search api. Search api have limitation 1000 results per search quary.
+    Crawl via search api.
+    Search api have limitation 1000 results per search quary.
     For extract more results from search for each request we adding letters of the alphabet to the query parameter.
 
     """
 
     click.echo(f'format-output: {format}')
 
-    token= os.environ.get('github_token', token)
-
-    if token == '':
-        click.echo(f'start with low rate limit')
     
 
+    if not token:
+        if os.environ.get('github_token'):
+            token = os.environ.get('github_token')
+        else:
+            click.echo(f'start with low rate limit')
+
     # create search expression
-    init_search_expresion = f'stars:{stars}+language:{language.capitalize()}'
+    init_search_expresion = f'stars:{stars_expression}+language:{language.capitalize()}'
 
     # generate file name maybe need just search_python
     addition_naming = ''
@@ -74,7 +85,6 @@ def popular_repos(language, stars, path, format, token):
 
     # result pagination
     if not data.get('total_count'):
-        print('sadassassads')
         click.echo(search_responce.text)
         return
 
@@ -89,7 +99,7 @@ def popular_repos(language, stars, path, format, token):
     global_count = data['total_count']
 
     # check exists
-    resolve_path = Path(path)
+    resolve_path = Path(crawldir)
 
     if not os.path.exists(resolve_path):
         os.makedirs(resolve_path)
@@ -98,14 +108,14 @@ def popular_repos(language, stars, path, format, token):
     # generate file path
     file_path = resolve_path / file_name
 
+    file_exist = os.path.isfile(file_path)
+
     file_modes = 'w+'
 
-    if format == 'csv':
-        file_modes = 'a+' 
 
-    file_exist = os.path.isfile(path)
-    
     with open(file_path, file_modes, newline='') as output_file:
+
+        
 
         if format == 'csv':
             
@@ -115,42 +125,61 @@ def popular_repos(language, stars, path, format, token):
             csv_headers = standart_repo.keys()
             fieldnames = csv_headers
             writer = csv.DictWriter(output_file, fieldnames=fieldnames)
-            csv_reader = csv.reader(output_file, delimiter=',')
+            
 
-        # already exist file in path
-        if file_exist:
-            if format == 'csv':
-
-                for row in csv_reader:
-                    alredy_parsed.add(row['id'])
-            else:
-
-                # read already parsed json
-                json_data = json.load(output_file)
-                for parsed_repo in json_data['data']:
-                    alredy_parsed.add(parsed_repo['id'])
-               
+        if format == 'csv':
+            writer.writeheader()
         else:
-            if format == 'csv':
-                writer.writeheader()
-            else:
-                # simple template object
-                json_data = { 
-                    'data':[]
-                }
+            # simple template object
+            json_data = { 
+                'data':[]
+            }
         
         # Put letter by letter to search query
-        # 
+        #
+        
         for letter in list(string.ascii_lowercase):
 
-            page =0
+            page = 1
 
             try:
 
                 # limitation of search result
-                while len(alredy_parsed) != data['total_count'] or page <= 11:
+                while len(alredy_parsed) <= global_count and page <= 10:
+
+
+                    
+                    if global_count > 1000:
+
+
+                        search_expresion = letter+'+' + init_search_expresion
+                    
+                    else:
+                        
+                        search_expresion = init_search_expresion
+                    
 
                     # parsing block
+                    request_url = f'https://api.github.com/search/repositories?q={search_expresion}&per_page=100&page={page}'
+                    search_responce = requests.get(request_url, headers=headers)
+
+                    rate_limit_raw = search_responce.headers.get(REMAINING_RATELIMIT_HEADER)
+
+                    try:
+                        if rate_limit_raw is not None:
+                            current_rate_limit = int(rate_limit_raw)
+                            if current_rate_limit <= 1:
+                                raise Error('Rate limit is end.')
+                    except:
+                        raise Error('Broken request.')
+
+                    
+
+                    data = json.loads(search_responce.text)
+
+
+                    if not data.get('items'):
+                        break
 
                     repos = data['items']
 
@@ -171,29 +200,6 @@ def popular_repos(language, stars, path, format, token):
 
                         alredy_parsed.add(repo['id'])
 
-                    if global_count > 1000:
-
-
-                        search_expresion = letter+'+' + init_search_expresion
-                    
-                    else:
-                        
-                        search_expresion = init_search_expresion
-                    
-
-                    # new search
-                    
-                    request_url = f'https://api.github.com/search/repositories?q={search_expresion}&per_page=100&page={page}'
-                    search_responce = requests.get(request_url, headers=headers)
-
-                    if search_responce.status_code !=200:
-                        break
-
-                    data = json.loads(search_responce.text)
-
-                    if not data["items"]:
-                        break
-                    
                     time.sleep(time_sleep)
                     page += 1
             except:

@@ -47,18 +47,23 @@ def write_with_size(string,file_index, path):
 
 
 @click.command()
-@click.option('--path', '-p', default='.', help='Path to save folder. default="." ')
-@click.option('--file', '-f', help='Input repos file.')
-@click.option('--token', '-t', help='Access token for increase rate limit. Read from $github_token if specify.', default='')
-def main(path: str, file: str, token: str):
-    token= os.environ.get('github_token', token)
+@click.option('--crawldir', '-p', default='.', help='Path to save folder. default="." ')
 
-    if token == '':
-        click.echo(f'start with low rate limit')
+@click.option('--repos-file', '-f', help='Input repos file.')
+
+@click.option('--token', '-t', help='Access token for increase rate limit. Read from env $github_token if specify.', default=None)
+def commits(crawldir: str, repos_file: str, token: str):
+
+
+    if not token:
+        if os.environ.get('github_token'):
+            token= os.environ.get('github_token')
+        else:
+            click.echo(f'start with low rate limit')
     
     print(os.listdir('./'))
 
-    source_file_path = Path(file)
+    source_file_path = Path(repos_file)
     file_exist = source_file_path.is_file()
     
     # load available repo
@@ -79,7 +84,7 @@ def main(path: str, file: str, token: str):
 
     
 
-    resolve_path = Path(path)
+    resolve_path = Path(crawldir)
 
     if not os.path.exists(resolve_path):
         os.makedirs(resolve_path)
@@ -120,4 +125,4 @@ def main(path: str, file: str, token: str):
 
 
 if __name__ == "__main__":
-    main()
+    commits()
