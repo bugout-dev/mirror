@@ -9,6 +9,9 @@ setup(
     install_requires=[
         'requests',
         'tqdm',
+        'pygit2',
+        'click',
+        'pandas'
     ],
     description='mirror: Data analysis for software projects',
     author='Neeraj Kashyap',
@@ -21,7 +24,7 @@ setup(
     url='https://github.com/simiotics/mirror',
     entry_points={
         'console_scripts': [
-            'mirror = mirror.cli:main'
+            'mirror = mirror.cli:cli'
         ]
     }
 )
