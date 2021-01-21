@@ -54,7 +54,9 @@ def write_with_size(string,file_index, path):
 @click.option('--token', '-t', help='Access token for increase rate limit. Read from env $github_token if specify.', default=None)
 def commits(crawldir: str, repos_file: str, token: str):
 
-
+    """
+    Read repos json file and upload all commits for that repos one by one.
+    """
     if not token:
         if os.environ.get('github_token'):
             token= os.environ.get('github_token')

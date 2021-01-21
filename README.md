@@ -68,6 +68,40 @@ That return next output structure.
         ...
       ...
 ```
+Or from python code. As example upload most popular repos:
+```python
+from mirror.github.clone_repos import clone_repos
 
-### Extract commits
+import os 
+
+languages = (
+    "CoffeeScript",
+    "CSS",
+    "Dart",
+    "Elixir",
+    "Go",
+    "Groovy",
+    "HTML",
+    "Java",
+    "Kotlin",
+    "Objective-C",
+    "Perl",
+    "PHP",
+    "PowerShell",
+    "Ruby",
+    "JavaScript",
+    "Python"
+)
+
+
+crawldir = os.environ.get('LANGUAGES_DIR')
+token = os.environ.get('GITHUB_TOKEN')
+repos_per_language = 50
+
+clone_repos.callback(crawldir=crawldir,
+                     stars_expression='>500',
+                     languages=languages,
+                     token=token,
+                     amount=repos_per_language)
+```
 

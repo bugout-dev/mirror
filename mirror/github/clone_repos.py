@@ -4,6 +4,7 @@ import pygit2
 import os
 import json
 import traceback
+import urllib.parse
 from typing import Tuple
 from pathlib import Path
 
@@ -54,7 +55,8 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
     with click.progressbar(languages) as bar:        
         for lang in bar:
             try:
-                search_expresion = f'stars:{stars_expression}+language:{lang.capitalize()}'
+                encoded_language = urllib.parse.quote(encoded_language)
+                search_expresion = f'stars:{stars_expression}+language:{encoded_language.capitalize()}'
 
                 request_url = f'https://api.github.com/search/repositories?q={search_expresion}&per_page={amount}&page=1'
                 search_responce = requests.get(request_url, headers=headers)
@@ -104,4 +106,4 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
 
 
 if __name__ == "__main__":
-    repos()
+    clone_repos()
