@@ -11,7 +11,8 @@ setup(
         'tqdm',
         'pygit2',
         'click',
-        'pandas'
+        'pandas',
+        'mypy'
     ],
     description='mirror: Data analysis for software projects',
     author='Neeraj Kashyap',
