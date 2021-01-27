@@ -68,6 +68,7 @@ That return next output structure.
         ...
       ...
 ```
+
 Or from python code. As example upload most popular repos:
 ```python
 from mirror.github.clone_repos import clone_repos
@@ -105,3 +106,22 @@ clone_repos.callback(crawldir=crawldir,
                      amount=repos_per_language)
 ```
 
+### Create commits from repo search
+
+For extract commts you can use "commits"
+That command read input file with repos and return you are jsons files with commits for each repos 
+
+```
+python -m mirror.cli commits \
+            --crawldir $MIRROR_CRAWL_DIR \
+            --repos-file $MIRROR_CRAWL_INTERVAL_SECONDS \
+```
+
+
+### Convert json data to csv for analize
+
+That utils create csv file and flatting json structure for that
+
+```
+python -m mirror.github.utils --json-files-folder $CRAWL_dir --output-csv $CSV_DATASET --command commits
+```

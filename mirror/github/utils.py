@@ -7,10 +7,26 @@ import pandas as pd
 
 
 
+def flatten_json(y):
+    out = {}
 
+    def flatten(x, name=''):
+        if type(x) is dict:
+            for a in x:
+                flatten(x[a], name + a + '_')
+        elif type(x) is list:
+            i = 0
+            for a in x:
+                flatten(a, name + str(i) + '_')
+                i += 1
+        else:
+            out[name[:-1]] = x
+
+    flatten(y)
+    return out
 
 @click.command()
-@click.option('--json-files-folder', '-p', default='.', help='folders with repo/commits. default="." ')
+@click.option('--json-files-folder', '-p', default='.', help='folders with repo/commits.', show_default=True)
 @click.option('--output-csv', '-f', help='Output csv normilize file.')
 @click.option('--command', '-t', help='specify wich type of content need extract.')
 def json_files_to_csv(command: str, path_input_folder: str, path_output_csv: str):
@@ -46,7 +62,7 @@ def json_files_to_csv(command: str, path_input_folder: str, path_output_csv: str
 
             # generate commit header
             
-            standart_commit = pd.json_normalize(commit, sep='_')
+            standart_commit = flatten_json(commit)
 
             csv_headers = standart_commit.keys()
             fieldnames = csv_headers
@@ -61,21 +77,26 @@ def json_files_to_csv(command: str, path_input_folder: str, path_output_csv: str
         for json_file in json_list:
             read_file = inputs_path / json_file
 
-            with open(read_file, 'r') as income:
-                json_data = json.loads(income.read())['data']
+            with open(read_file, 'r', encoding='utf-8') as income:
+                print(read_file)
+                try:
+                    json_data = json.loads(income.read())['data']
+                except:
+                    print("not processed")
 
                 # list of repo
 
                 for repo in json_data:
                     commits = list(repo.values())[0]
-                    with open(output_file.resolve(), 'a', newline='') as output_csv:
+                    with open(output_file.resolve(), 'a', newline='', encoding='utf8') as output_csv:
 
                         fieldnames = csv_headers
-                        writer = csv.DictWriter(output_csv, fieldnames=fieldnames)
+                        writer = csv.DictWriter(output_csv, fieldnames=fieldnames,  extrasaction='ignore')
 
                         for commit in commits:
-                            commit_normalization = pd.json_normalize(commit, sep='_')
-                            writer.writerow(commit_normalization.to_dict())
+                            commit_normalization = flatten_json(commit)
+
+                            writer.writerow(commit_normalization)
 
 if __name__ == "__main__":
-    main()
+    json_files_to_csv()

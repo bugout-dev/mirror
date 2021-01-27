@@ -13,6 +13,8 @@ import traceback
 
 
 
+REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
+
 
 def get_size(obj, seen=None):
     """Recursively finds size of objects"""
@@ -63,8 +65,6 @@ def commits(crawldir: str, repos_file: str, token: str):
         else:
             click.echo(f'start with low rate limit')
     
-    print(os.listdir('./'))
-
     source_file_path = Path(repos_file)
     file_exist = source_file_path.is_file()
     
@@ -100,19 +100,39 @@ def commits(crawldir: str, repos_file: str, token: str):
 
     write_with_size(start_block,file_index,resolve_path)
 
+    repo_amount = len(repos_data['data'])
+    
     with click.progressbar(repos_data['data']) as bar:
-        for repo in bar:
+        for i,repo in enumerate(bar):
 
             #request commits
-            try:
+            while True:
+                try:
 
-                commits_responce = requests.get(repo['commits_url'].replace('{/sha}',''), headers=headers)
-            except:
-                continue
+                    commits_responce = requests.get(repo['commits_url'].replace('{/sha}',''), headers=headers)
+                    
+                except Exception as err:
+                    print(err)
+                    continue
 
-            commit_data = json.load(commits_responce)
+                
+                rate_limit_raw = commits_responce.headers.get(REMAINING_RATELIMIT_HEADER)
 
-            repo_dump = json.dumps({repo['id']:commit_data})
+                try:
+                    if rate_limit_raw is not None:
+                        current_rate_limit = int(rate_limit_raw)
+                        if current_rate_limit <= 1:
+                            
+                            print('Rate limit is end. Awaiting 1 minute.')
+                            time.sleep(60)
+                        else:
+                            break
+                except:
+                    raise ('Broken request.')
+
+            commits_data = commits_responce.json()
+
+            repo_dump = json.dumps({repo['id']:commits_data})
 
             current_size = write_with_size(repo_dump, file_index, resolve_path)
 
@@ -122,7 +142,8 @@ def commits(crawldir: str, repos_file: str, token: str):
                 file_index += 1
                 write_with_size(start_block, file_index, resolve_path)
             else:
-                write_with_size(',', file_index, resolve_path)
+                if i != repo_amount - 1:
+                    write_with_size(',', file_index, resolve_path)
     write_with_size(end_block, file_index, resolve_path) 
 
 
