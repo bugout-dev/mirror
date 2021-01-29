@@ -1,3 +1,6 @@
 .mirror/
 .vscode/
 __pycache__
+build
+simiotics_mirror.egg-info
+dist

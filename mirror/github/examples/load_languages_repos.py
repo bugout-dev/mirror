@@ -21,10 +21,4 @@ language_ext = {
     "Python": ".py",
 }
 
-
-
-# print(dir(clone_repos))
-
-# crawldir = os.environ.get('LANGUAGES_REPOS')
-
 clone_repos.callback(crawldir="D:\\languages", stars_expression='>500', languages=tuple(language_ext.keys()), token='', amount=50)

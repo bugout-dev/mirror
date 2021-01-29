@@ -48,13 +48,36 @@ def write_with_size(string,file_index, path):
     return size_of_file
 
 
+
+def request_with_limit(repo, headers, min_rate_limit):
+    try:
+        while True:
+
+            response = requests.get(repo['commits_url'].replace('{/sha}',''), headers=headers)
+        
+            rate_limit_raw = response.headers.get(REMAINING_RATELIMIT_HEADER)
+
+            if rate_limit_raw is not None:
+                current_rate_limit = int(rate_limit_raw)
+                if current_rate_limit <= min_rate_limit:
+                    
+                    print('Rate limit is end. Awaiting 1 minute.')
+                    time.sleep(60)
+                else:
+                    break
+        return response
+    except:
+        raise ('Broken request.')
+
 @click.command()
 @click.option('--crawldir', '-p', default='.', help='Path to save folder. default="." ')
 
 @click.option('--repos-file', '-f', help='Input repos file.')
 
 @click.option('--token', '-t', help='Access token for increase rate limit. Read from env $github_token if specify.', default=None)
-def commits(crawldir: str, repos_file: str, token: str):
+
+@click.option('--min-rate-limit', '-l', type=int, default=30, help='Minimum remaining rate limit on API under which the crawl is interrupted')
+def commits(crawldir: str, repos_file: str, token: str, min_rate_limit: int):
 
     """
     Read repos json file and upload all commits for that repos one by one.
@@ -105,30 +128,11 @@ def commits(crawldir: str, repos_file: str, token: str):
     with click.progressbar(repos_data['data']) as bar:
         for i,repo in enumerate(bar):
 
+            
+
             #request commits
             while True:
-                try:
-
-                    commits_responce = requests.get(repo['commits_url'].replace('{/sha}',''), headers=headers)
-                    
-                except Exception as err:
-                    print(err)
-                    continue
-
-                
-                rate_limit_raw = commits_responce.headers.get(REMAINING_RATELIMIT_HEADER)
-
-                try:
-                    if rate_limit_raw is not None:
-                        current_rate_limit = int(rate_limit_raw)
-                        if current_rate_limit <= 1:
-                            
-                            print('Rate limit is end. Awaiting 1 minute.')
-                            time.sleep(60)
-                        else:
-                            break
-                except:
-                    raise ('Broken request.')
+                commits_responce = request_with_limit(repo, headers, min_rate_limit)
 
             commits_data = commits_responce.json()
 

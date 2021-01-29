@@ -1,15 +1,17 @@
 
 import os
 import sys
-from pathlib import Path
-import nltk
-import itertools
-from nltk.tokenize.casual import casual_tokenize
-import random
-from sklearn.feature_extraction.text import CountVectorizer
 import csv
-
+import json
+import click
+import sqlite3
+import itertools
+from . import db_tool
+from pathlib import Path
+from typing import Tuple, Optional
 from datetime import datetime
+
+
 
 
 language_ext = {
@@ -75,26 +77,48 @@ def chunking(lang_path, ext, chunksize):
     return corpus
 
 
-def generate_datasets():
-    print(os.environ)
-    languages_folder = os.environ.get('LANGUAGES_REPOS')
 
-    chunksize = 10
+@click.command(context_settings=dict(help_option_names=['-h', '--help']))
+@click.option('--result-dir', '-r', default='.', help='Dir for data.', show_default=True)
+@click.option('--languages-file', '-f', help='Path to json file with languages for extracting.', required = True)
+@click.option('--languages-dir', '-ld', help='Path to directory with languages repos.')
+@click.option('--chunksize', '-cs', type=int, default=10, help='Size of code snipet.')
+@click.option('--sqlite-path', '-sq', help='Sqlite for writing snipets.', default = None,  show_default=True)
+def generate_datasets(result_dir: str, languages_file: str, languages_dir: str, chunksize: int, sqlite_path: Optional[str]):
+    
+    if not languages_dir:
+        languages_folder = os.environ.get('LANGUAGES_REPOS')
 
-    output_folder = Path(languages_folder) / chunk_output_folder
+    chunksize = chunksize
+
+
+    if sqlite_path:
+        conn = db_tool.create_connection(sqlite_path)
+        db_tool.create_table_tasks(conn)
+
+    if languages_file:
+        try:
+            langs_file = Path(languages_file)
+            with langs_file.open('r', encoding='utf8') as langs:
+                language_ext = json.load(langs)
+        except Exception as err:
+            print(f"Can't read languages file. Err: {err}")
+
+    output_folder = Path(result_dir) / chunk_output_folder
 
     output_folder.mkdir(parents=True, exist_ok=True)
 
     output_csv = output_folder / f"result_{chunksize}_rows_snipet_dataset.csv"
 
     with output_csv.open( mode='wt', encoding='utf8', newline='') as output:
-        fnames = ['snipet', 'lang', "datetime", "mirror_version"]
+        fnames = ['snipet', 'lang']
         writer = csv.DictWriter(output, fieldnames=fnames)
         writer.writeheader()   
 
         for lang in language_ext:
             lang_path = Path(languages_folder) / lang
-
+            if not lang_path.exists():
+                continue
             
 
             # create chunks
@@ -107,7 +131,12 @@ def generate_datasets():
 
                 with chunk_path.open('wt', encoding='utf-8') as chunk_file:
                     chunk_file.write(chunk)
-                writer.writerow({'snipet' : chunk_path, 'lang': lang, "mirror_version": mirror_version})
+                writer.writerow({'snipet' : chunk_path, 'lang': lang})
+                if sqlite_path:
+                    db_tool.write_snipet_to_db(conn, chunk, lang)
+    config = json.dumps({"mirror version" : "0.1.1",
+                         "date": f"{datetime.datetime.now()}",
+                         "langs_config":language_ext})
 
 
 

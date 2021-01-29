@@ -17,6 +17,29 @@ class Error(Exception):
     pass
 
 
+def request_with_limit(url, headers, min_rate_limit):
+    try:
+        while True:
+
+            response = requests.get(url, headers=headers)
+        
+            rate_limit_raw = response.headers.get(REMAINING_RATELIMIT_HEADER)
+
+            if rate_limit_raw is not None:
+                current_rate_limit = int(rate_limit_raw)
+                if current_rate_limit <= min_rate_limit:
+                    
+                    print('Rate limit is end. Awaiting 1 minute.')
+                    time.sleep(60)
+                else:
+                    break
+        return response
+    except:
+        raise ('Broken request.')
+
+
+
+
 REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
 
 @click.command()
@@ -29,7 +52,9 @@ REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
 @click.option('--format', '-f', type=click.Choice(['csv', 'json'], case_sensitive=False), help='Output file format.', default='json', show_default=True)
 
 @click.option('--token', '-t', help='Access token for increase rate limit. Read from env $github_token if specify.', default=None, show_default=True)
-def popular_repos(language: str, stars_expression: str, crawldir: str, format: str, token: Optional[str]):
+
+@click.option('--min-rate-limit', '-l', type=int, default=30, help='Minimum remaining rate limit on API under which the crawl is interrupted')
+def popular_repos(language: str, stars_expression: str, crawldir: str, format: str, token: Optional[str], min_rate_limit: int):
 
     """
     Crawl via search api.
@@ -62,11 +87,6 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, format: s
         file_name = f'repo_search_{addition_naming}.csv'
     else:
         file_name = f'repo_search_{addition_naming}.json'
-    
-
-    # hack for rate limit need rewrite
-    
-    time_sleep = 3600/10000
 
 
     #  make inital request 
@@ -75,20 +95,19 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, format: s
                 'Authorization': f'token {token}'}
 
     search_url = f'https://api.github.com/search/repositories?q={init_search_expresion}&per_page=100'
+   
+    search_response = request_with_limit(search_url, headers, min_rate_limit)
+
     click.echo(f' initial request done {search_url}')
 
-    search_responce = requests.get(search_url, headers=headers)
-
-    time.sleep(time_sleep)
-
-    data = json.loads(search_responce.text)
+    data = json.loads(search_response.text)
 
     # result pagination
     if not data.get('total_count'):
-        click.echo(search_responce.text)
+        click.echo(search_response.text)
         return
 
-
+    # etract total count github limit is 10 page of search result
     page_amount = data['total_count']//100
 
     alredy_parsed = set()
@@ -103,7 +122,6 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, format: s
 
     if not os.path.exists(resolve_path):
         os.makedirs(resolve_path)
-
 
     # generate file path
     file_path = resolve_path / file_name
@@ -161,21 +179,10 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, format: s
 
                     # parsing block
                     request_url = f'https://api.github.com/search/repositories?q={search_expresion}&per_page=100&page={page}'
-                    search_responce = requests.get(request_url, headers=headers)
 
-                    rate_limit_raw = search_responce.headers.get(REMAINING_RATELIMIT_HEADER)
+                    search_response = request_with_limit(search_url, headers, min_rate_limit)
 
-                    try:
-                        if rate_limit_raw is not None:
-                            current_rate_limit = int(rate_limit_raw)
-                            if current_rate_limit <= 1:
-                                raise Error('Rate limit is end.')
-                    except:
-                        raise Error('Broken request.')
-
-                    
-
-                    data = json.loads(search_responce.text)
+                    data = json.loads(search_response.text)
 
 
                     if not data.get('items'):
@@ -199,8 +206,7 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, format: s
                             continue
 
                         alredy_parsed.add(repo['id'])
-
-                    time.sleep(time_sleep)
+                    
                     page += 1
             except:
                 traceback.print_exc()

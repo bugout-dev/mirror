@@ -17,7 +17,8 @@ REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
 @click.argument('languages', nargs=-1)
 @click.option('--token', '-t', help='Access token for increase rate limit. Read from $github_token if specify.', default='', show_default=True)
 @click.option('--amount', '-n', help='Amount of repo.', type=int, default=50, show_default=True)
-def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: str, amount: int):
+@click.option('--languages-file', '-f', help='Path to json file with languages for extracting.')
+def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: str, amount: int, languages_file: str):
     """
     Clone repos from search api to output dir.
     Be careful check of upload size not provide
@@ -51,6 +52,15 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
 
     if not os.path.exists(resolve_path):
         os.makedirs(resolve_path)
+
+    if languages_file:
+        try:
+            langs_file = Path(languages_file)
+            with langs_file.open('r', encoding='utf8') as langs:
+                langs_conf = json.load(langs.read())
+            languages = langs_conf.keys()
+        except :
+            print("Can't read langiages file.")
 
     with click.progressbar(languages) as bar:        
         for lang in bar:
