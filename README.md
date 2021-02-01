@@ -1,8 +1,4 @@
 # mirror - Tools for software project analysis
-
-
-
-
 ___
 
 ## Github
@@ -11,18 +7,15 @@ ___
 
 For correct usage github access token is requared.
 
-
 #### Modules commands
 ```
-  clone     
-  crawl     
-  nextid    
-  sample    
-  search    
-  validate  
+  clone
+  crawl
+  nextid
+  sample
+  search
+  validate
 ```
-
-
 
 #### Extract all repos metadata
 
