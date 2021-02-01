@@ -1,0 +1,18 @@
+{
+    "CoffeeScript": ".coffee",
+    "CSS": ".css",
+    "Dart": ".dart",
+    "Elixir": ".ex",
+    "Go": ".go",
+    "Groovy": ".groovy",
+    "HTML": ".html",
+    "Java": ".java",
+    "Kotlin": ".kt",
+    "Objective-C": ".m",
+    "Perl": ".pl",
+    "PHP": ".php",
+    "PowerShell": ".sh",
+    "Ruby": ".rb",
+    "JavaScript": ".js",
+    "Python": ".py"
+}

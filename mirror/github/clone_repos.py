@@ -8,6 +8,8 @@ import urllib.parse
 from typing import Tuple
 from pathlib import Path
 
+from ..settings import GITHUB_TOKEN
+
 REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
 
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
@@ -15,9 +17,11 @@ REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
 @click.option('--stars-expression', '-s', default='>500', help='Stars search condition. ">200" / "=400" / "<300" as example.', show_default=True)
 @click.option('--languages', '-ls', nargs=0, help="Specify languages for extraction. Mirror ignoring that parametr if languages file is specified.")
 @click.argument('languages', nargs=-1)
-@click.option('--token', '-t', help='Access token for increase rate limit. Read from $github_token if specify.', default='', show_default=True)
+@click.option('--token', '-t', help='Access token for increase rate limit. Read from $GITHUB_TOKEN if specify.', default='', show_default=True)
 @click.option('--amount', '-n', help='Amount of repo.', type=int, default=50, show_default=True)
 @click.option('--languages-file', '-f', help='Path to json file with languages for extracting.')
+
+
 def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: str, amount: int, languages_file: str):
     """
     Clone repos from search api to output dir.
@@ -38,14 +42,11 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
 
     """
 
-    if not token:
-        if os.environ.get('github_token'):
-            token= os.environ.get('github_token')
-        else:
-            click.echo(f'start with low rate limit')
+    if GITHUB_TOKEN is None:
+        click.echo(f'start with low rate limit')
     
     headers = {'accept': 'application/vnd.github.v3+json',
-                'Authorization': f'token {token}'}
+                'Authorization': f'token {GITHUB_TOKEN}'}
     
 
     resolve_path = Path(crawldir)
@@ -65,7 +66,7 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
     with click.progressbar(languages) as bar:        
         for lang in bar:
             try:
-                encoded_language = urllib.parse.quote(encoded_language)
+                encoded_language = urllib.parse.quote(lang)
                 search_expresion = f'stars:{stars_expression}+language:{encoded_language.capitalize()}'
 
                 request_url = f'https://api.github.com/search/repositories?q={search_expresion}&per_page={amount}&page=1'
@@ -93,8 +94,8 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
                 for repo in data["items"]:
                     git_url = repo['git_url']
 
-                    if token:
-                        git_url = "".join(("https://",token,'@',git_url.split('//')[1]))
+                    if GITHUB_TOKEN:
+                        git_url = "".join(("https://",GITHUB_TOKEN,'@',git_url.split('//')[1]))
 
                     print(repo["name"])
                     out_path = resolve_path / lang.capitalize() / repo["name"]

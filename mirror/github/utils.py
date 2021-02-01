@@ -3,7 +3,6 @@ import json
 import os
 import click
 from pathlib import Path
-import pandas as pd
 
 
 
