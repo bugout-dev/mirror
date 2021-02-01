@@ -1,5 +1,4 @@
 import requests
-import re
 import click
 import os
 import csv
@@ -10,6 +9,8 @@ import pandas as pd
 import string
 import traceback
 from typing import Optional
+
+from ..settings import GITHUB_TOKEN
 
 
 class Error(Exception):
@@ -51,9 +52,9 @@ REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
 
 @click.option('--format', '-f', type=click.Choice(['csv', 'json'], case_sensitive=False), help='Output file format.', default='json', show_default=True)
 
-@click.option('--token', '-t', help='Access token for increase rate limit. Read from env $github_token if specify.', default=None, show_default=True)
+@click.option('--token', '-t', help='Access token for increase rate limit. Read from env $GITHUB_TOKEN if specify.', default=None, show_default=True)
 
-@click.option('--min-rate-limit', '-l', type=int, default=30, help='Minimum remaining rate limit on API under which the crawl is interrupted')
+@click.option('--min-rate-limit', '-r', type=int, default=30, help='Minimum remaining rate limit on API under which the crawl is interrupted')
 def popular_repos(language: str, stars_expression: str, crawldir: str, format: str, token: Optional[str], min_rate_limit: int):
 
     """
@@ -65,13 +66,8 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, format: s
 
     click.echo(f'format-output: {format}')
 
-    
-
-    if not token:
-        if os.environ.get('github_token'):
-            token = os.environ.get('github_token')
-        else:
-            click.echo(f'start with low rate limit')
+    if GITHUB_TOKEN is None:
+        click.echo(f'start with low rate limit')
 
     # create search expression
     init_search_expresion = f'stars:{stars_expression}+language:{language.capitalize()}'
@@ -92,7 +88,7 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, format: s
     #  make inital request 
 
     headers = {'accept': 'application/vnd.github.v3+json',
-                'Authorization': f'token {token}'}
+                'Authorization': f'token {GITHUB_TOKEN}'}
 
     search_url = f'https://api.github.com/search/repositories?q={init_search_expresion}&per_page=100'
    
