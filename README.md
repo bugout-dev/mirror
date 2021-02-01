@@ -1,23 +1,34 @@
 # mirror - Tools for software project analysis
-___
 
-## Github
-
-### Base usage example
-
-For correct usage github access token is requared.
-
-#### Modules commands
-```
-  clone
-  crawl
-  nextid
-  sample
-  search
-  validate
+## Setup
+- Prepare python environment and install package
+- For development please use `pip install -r requirements.dev.txt`
+- Copy `sample.env` to `dev.env`, fill it with required variables and source it
+```bash
+export GITHUB_TOKEN="<your github token>"
+export LANGUAGES_DIR="<directory with languages>"
 ```
 
-#### Extract all repos metadata
+- To avoid block from GitHub prepare Rate Limit watcher
+```bash
+watch -d -n 5 'curl https://api.github.com/rate_limit -s -H "Authorization: Bearer $GITHUB_TOKEN" "Accept: application/vnd.github.v3+json"'
+```
+
+### Modules commands
+
+```
+python -m mirror.cli --help
+
+clone     Clone repos from search api to output dir.
+commits   Read repos json file and upload all commits for that repos one...
+crawl     Processes arguments as parsed from the command line and uses...
+nextid    Prints ID of most recent repository crawled and written to the...
+sample    Writes repositories sampled from a crawl directory to an output...
+search    Crawl via search api.
+validate  Prints ID of most recent repository crawled and written to the...
+```
+
+### Extract all repos metadata
 
 For get all repos metadata need call `crawl` command that generate full amount of github repso metadata as big pack of json files.
 

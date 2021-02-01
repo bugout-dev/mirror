@@ -261,4 +261,4 @@ dmypy.json
 simiotics_mirror.egg-info
 
 # Env
-.dev.env
+dev.env
