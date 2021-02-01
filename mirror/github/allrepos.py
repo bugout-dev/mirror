@@ -15,6 +15,8 @@ import sys
 import time
 from typing import Any, Callable, Dict, Iterator, List, Optional, TextIO, Tuple
 
+import click
+
 import requests
 from tqdm import tqdm
 
@@ -84,7 +86,23 @@ def crawl(start_id: int, max_id: int, interval: float, min_rate_limit: int) -> D
 
     return result
 
-def crawl_handler(args: argparse.Namespace) -> None:
+
+@click.command(context_settings={
+    "ignore_unknown_options": True
+})
+@click.option('--start-id', '-s', type=int, default=0, help='Last ID seen in GitHub all repos crawl; current crawl will start from its successor')
+
+@click.option('--max-id', '-m', type=int, default=100000000, help='Crawl should extend to this idea (and no more than one page further)')
+
+@click.option('--interval',  '-t', type=float, default=1.0, help='Number of seconds to wait between page retrievals from /repositories endpoint')
+
+@click.option('--min-rate-limit', '-l', type=int, default=30, help='Minimum remaining rate limit on API under which the crawl is interrupted')
+
+@click.option('--batch-size', '-n', type=int, default=3000, help='Number of pages  should (roughly) be processed before writing results to disk')
+
+@click.option('--crawldir', '-d', help='Path to directory in which crawl results should be written')
+
+def crawl_handler(start_id: str, max_id: int, interval: float, min_rate_limit: int, batch_size: int, crawldir: str) -> None:
     """
     Processes arguments as parsed from the command line and uses them to run a crawl of the GitHub
     /repositories endpoint.
@@ -98,16 +116,16 @@ def crawl_handler(args: argparse.Namespace) -> None:
 
     Returns: None
     """
-    next_id = nextid(args.crawldir)
-    current_max = max(args.start_id, next_id)
-    while current_max < args.max_id:
+    next_id = nextid(crawldir)
+    current_max = max(start_id, next_id)
+    while current_max < max_id:
         result = crawl(
             current_max,
-            min(current_max + args.batch_size, args.max_id),
-            args.interval,
-            args.min_rate_limit,
+            min(current_max + batch_size, max_id),
+            interval,
+            min_rate_limit,
         )
-        outfile = os.path.join(args.crawldir, f'{current_max}.json')
+        outfile = os.path.join(crawldir, f'{current_max}.json')
         with open(outfile, 'w') as ofp:
             json.dump(result, ofp)
 
@@ -115,61 +133,8 @@ def crawl_handler(args: argparse.Namespace) -> None:
             break
         current_max = result['data'][-1]['id']
 
-        if result['ending_rate_limit'] < args.min_rate_limit:
+        if result['ending_rate_limit'] < min_rate_limit:
             break
-
-def crawl_populator(parser: argparse.ArgumentParser) -> None:
-    """
-    Populates parser with crawl parameters
-
-    Args:
-    parser
-        Argument parser representing crawl functionality
-
-    Returns: None
-    """
-    parser.add_argument(
-        '--start-id',
-        '-s',
-        type=int,
-        default=0,
-        help='Last ID seen in GitHub all repos crawl; current crawl will start from its successor',
-    )
-    parser.add_argument(
-        '--max-id',
-        '-m',
-        type=int,
-        default=100000000,
-        help='Crawl should extend to this idea (and no more than one page further)',
-    )
-    parser.add_argument(
-        '--interval',
-        '-t',
-        type=float,
-        default=1.0,
-        help='Number of seconds to wait between page retrievals from /repositories endpoint',
-    )
-    parser.add_argument(
-        '--min-rate-limit',
-        '-l',
-        type=int,
-        default=30,
-        help='Minimum remaining rate limit on API under which the crawl is interrupted',
-    )
-    parser.add_argument(
-        '--batch-size',
-        '-n',
-        type=int,
-        default=3000,
-        help='Number of pages  should (roughly) be processed before writing results to disk',
-    )
-    parser.add_argument(
-        '--crawldir',
-        '-d',
-        required=True,
-        help='Path to directory in which crawl results should be written',
-    )
-    parser.set_defaults(func=crawl_handler)
 
 def ordered_crawl(crawldir: str) -> List[Tuple[str, int]]:
     """
@@ -193,6 +158,7 @@ def ordered_crawl(crawldir: str) -> List[Tuple[str, int]]:
         ) for rfile in result_files
     ]
     return sorted(indexed_result_files, key=lambda p: p[1])
+
 
 def nextid(crawldir: str) -> int:
     """
@@ -221,7 +187,10 @@ def nextid(crawldir: str) -> int:
         return index
     return result['data'][-1]['id']
 
-def nextid_handler(args: argparse.Namespace) -> None:
+
+@click.command()
+@click.option('--crawldir', '-d', help='Path to directory in which crawl results should be written')
+def nextid_handler(crawldir: str) -> None:
     """
     Prints ID of most recent repository crawled and written to the crawldir parsed into the given
     argparse args object.
@@ -232,25 +201,7 @@ def nextid_handler(args: argparse.Namespace) -> None:
 
     Returns: None. Prints most recent repository ID to screen.
     """
-    print(nextid(args.crawldir))
-
-def nextid_populator(parser: argparse.ArgumentParser) -> None:
-    """
-    Populates parser with nextid parameters
-
-    Args:
-    parser
-        Argument parser representing nextid functionality
-
-    Returns: None
-    """
-    parser.add_argument(
-        '--crawldir',
-        '-d',
-        required=True,
-        help='Path to directory in which crawl results should be written',
-    )
-    parser.set_defaults(func=nextid_handler)
+    print(nextid(crawldir))
 
 def validate(result_range: List[Tuple[str, int]]) -> List[Tuple[int, int]]:
     """
@@ -282,7 +233,14 @@ def validate(result_range: List[Tuple[str, int]]) -> List[Tuple[int, int]]:
 
     return missing_ranges
 
-def validate_handler(args: argparse.Namespace) -> None:
+
+
+
+@click.command()
+@click.option( '--crawldir', '-d',  help='Path to directory in which crawl results should be written')
+@click.option('--num-processes', '-p', type=int, default=1, help='Number of processes to use when performing validation')
+@click.option('--outfile', '-o', help='Path to file into which validation output should be written')
+def validate_handler(crawldir: str, num_processes: int, outfile: str) -> None:
     """
     Prints ID of most recent repository crawled and written to the crawldir parsed into the given
     argparse args object.
@@ -294,13 +252,13 @@ def validate_handler(args: argparse.Namespace) -> None:
     Returns: None. Prints most recent repository ID to screen.
     """
     ofp = sys.stdout
-    if args.outfile is not None:
-        ofp = open(args.outfile, 'w')
+    if outfile is not None:
+        ofp = open(outfile, 'w')
     invalid = []
 
-    result_files = ordered_crawl(args.crawldir)
+    result_files = ordered_crawl(crawldir)
     if len(result_files) > 1:
-        concurrency = args.num_processes
+        concurrency = num_processes
         if concurrency > len(result_files) - 1:
             concurrency = len(result_files) - 1
         worker_pool = multiprocessing.Pool(concurrency)
@@ -309,39 +267,8 @@ def validate_handler(args: argparse.Namespace) -> None:
         invalid = [range for results in worker_pool.map(validate, ranges) for range in results]
 
     json.dump(invalid, ofp)
-    if args.outfile is not None:
+    if outfile is not None:
         ofp.close()
-
-def validate_populator(parser: argparse.ArgumentParser) -> None:
-    """
-    Populates parser with validate parameters
-
-    Args:
-    parser
-        Argument parser representing validate functionality
-
-    Returns: None
-    """
-    parser.add_argument(
-        '--crawldir',
-        '-d',
-        required=True,
-        help='Path to directory in which crawl results should be written',
-    )
-    parser.add_argument(
-        '--num-processes',
-        '-p',
-        type=int,
-        default=1,
-        help='Number of processes to use when performing validation',
-    )
-    parser.add_argument(
-        '--outfile',
-        '-o',
-        required=False,
-        help='Path to file into which validation output should be written',
-    )
-    parser.set_defaults(func=validate_handler)
 
 
 def sample(crawl_batches: List[str], choose_probability: float) -> Iterator[Dict[str, Any]]:
@@ -377,7 +304,19 @@ def sample(crawl_batches: List[str], choose_probability: float) -> Iterator[Dict
             if random.random() < choose_probability:
                 yield repository
 
-def sample_handler(args: argparse.Namespace) -> None:
+@click.command()
+@click.option('--crawldir', '-d', help='Path to directory in which crawl results should be written')
+@click.option('--outfile', '-o', type=click.File('w'), default=sys.stdout, help='Path to file to which samples should be written (default: stdout)')
+@click.option('--probability', '-p', type=float, help='Probability with which a repository in the crawl directory should be chosen')
+@click.option('--from-id', default=0,
+    help=(
+        'GitHub ID to begin sampling from (default: 0). Could have non-intuitive behavior '
+        'since it uses the id on the crawl batch file, and not the id on the repos themselves. '
+        'Uses the batch whose starting GitHub ID is the smallest one greater than --from-id.'
+    )
+)
+@click.option('--to-id', type=int, default=None, help='GitHub ID to end sampling at (default: None)') # exception may
+def sample_handler(crawldir: str, outfile: click.File('w'), probability: float, from_id: int,  to_id: str) -> None:
     """
     Writes repositories sampled from a crawl directory to an output file in JSON lines format
 
@@ -390,63 +329,15 @@ def sample_handler(args: argparse.Namespace) -> None:
     # Validator for files containing crawl result batches
     def is_valid(batch_item):
         _, start_id = batch_item
-        if start_id < args.from_id:
+        if start_id < from_id:
             return False
-        if args.to_id is not None and start_id > args.to_id:
+        if to_id is not None and start_id > to_id:
             return False
         return True
 
-    with args.outfile as ofp:
-        ordered_batches = ordered_crawl(args.crawldir)
+    with outfile as ofp:
+        ordered_batches = ordered_crawl(crawldir)
         valid_batches = [batch[0] for batch in ordered_batches if is_valid(batch)]
-        samples = sample(valid_batches, args.probability)
+        samples = sample(valid_batches, probability)
         for repository in samples:
             print(json.dumps(repository), file=ofp)
-
-def sample_populator(parser: argparse.ArgumentParser) -> None:
-    """
-    Populates parser with sample parameters
-
-    Args:
-    parser
-        Argument parser representing sample functionality
-
-    Returns: None
-    """
-    parser.add_argument(
-        '--crawldir',
-        '-d',
-        required=True,
-        help='Path to directory in which crawl results should be written',
-    )
-    parser.add_argument(
-        '--outfile',
-        '-o',
-        type=argparse.FileType('w'),
-        default=sys.stdout,
-        help='Path to file to which samples should be written (default: stdout)',
-    )
-    parser.add_argument(
-        '--probability',
-        '-p',
-        type=float,
-        required=True,
-        help='Probability with which a repository in the crawl directory should be chosen',
-    )
-    parser.add_argument(
-        '--from-id',
-        type=int,
-        default=0,
-        help=(
-            'GitHub ID to begin sampling from (default: 0). Could have non-intuitive behavior '
-            'since it uses the id on the crawl batch file, and not the id on the repos themselves. '
-            'Uses the batch whose starting GitHub ID is the smallest one greater than --from-id.'
-        ),
-    )
-    parser.add_argument(
-        '--to-id',
-        type=int,
-        default=None,
-        help='GitHub ID to end sampling at (default: None)',
-    )
-    parser.set_defaults(func=sample_handler)

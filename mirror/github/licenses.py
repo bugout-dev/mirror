@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import sys
+import click
 import time
 from typing import Any, Dict, List
 
@@ -53,7 +54,20 @@ def get_license(repo_api_url: str) -> Dict[str, Any]:
     }
     return result
 
-def licenses_handler(args: argparse.Namespace) -> None:
+
+@click.command(context_settings={
+    "ignore_unknown_options": True
+})
+@click.option('--repos', '-r', help='File with JSON array of GitHub API URLs for repos (if value is "file:<filename>") '
+            'OR comma-separated list of GitHub API URLs of repos')
+
+@click.option('--interval', '-t', type=float, default=0.01, help='Number of seconds to wait between page retrievals from /repositories endpoint')
+
+@click.option('--min-rate-limit',  '-l', type=int, default=30, help='Minimum remaining rate limit on API under which the crawl is interrupted')
+
+@click.option('--outfile', '-o', default=30, help='File to which to write license information as JSON lines, one per repository')
+
+def licenses_handler(repos_json: str, interval: float, min_rate_limit: int, outfile: str) -> None:
     """
     Handler for licenses subcommand
 
@@ -66,66 +80,23 @@ def licenses_handler(args: argparse.Namespace) -> None:
     file specified by args.outfile
     """
     repos: List[str] = []
-    if args.repos[:len('file:')] == 'file:':
-        infile = args.repos[len('file:'):]
+    if repos_json[:len('file:')] == 'file:':
+        infile = repos_json[len('file:'):]
         with open(infile, 'r') as ifp:
             repos = json.load(ifp)
     else:
-        repos = args.repos.split(',')
+        repos = repos_json.split(',')
 
     ofp = sys.stdout
-    if args.outfile is not None:
-        ofp = open(args.outfile, 'w')
+    if outfile is not None:
+        ofp = open(outfile, 'w')
 
     for repo in repos:
-        time.sleep(args.interval)
+        time.sleep(interval)
         result = get_license(repo)
         print(json.dumps(result), file=ofp)
-        if result['ending_rate_limit'] < args.min_rate_limit:
+        if result['ending_rate_limit'] < min_rate_limit:
             break
 
-    if args.outfile is not None:
+    if outfile is not None:
         ofp.close()
-
-def populator(parser: argparse.ArgumentParser) -> None:
-    """
-    Populates parser with arguments and handler for licenses subcommand.
-
-    Args:
-    parser
-        Argument parser representing licenses functionality
-
-    Returns: None
-    """
-    parser.add_argument(
-        '--repos',
-        '-r',
-        type=str,
-        required=True,
-        help=(
-            'File with JSON array of GitHub API URLs for repos (if value is "file:<filename>") '
-            'OR comma-separated list of GitHub API URLs of repos'
-        ),
-    )
-    parser.add_argument(
-        '--interval',
-        '-t',
-        type=float,
-        default=0.01,
-        help='Number of seconds to wait between page retrievals from /repositories endpoint',
-    )
-    parser.add_argument(
-        '--min-rate-limit',
-        '-l',
-        type=int,
-        default=30,
-        help='Minimum remaining rate limit on API under which the crawl is interrupted',
-    )
-    parser.add_argument(
-        '--outfile',
-        '-o',
-        type=str,
-        required=False,
-        help='File to which to write license information as JSON lines, one per repository',
-    )
-    parser.set_defaults(func=licenses_handler)

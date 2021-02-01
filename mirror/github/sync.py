@@ -10,7 +10,7 @@ import sys
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 from tqdm import tqdm
-
+import click
 from .allrepos import ordered_crawl
 
 def setup_database(conn: sqlite3.Connection) -> None:
@@ -201,7 +201,13 @@ def sync(
 
     return synced
 
-def handler(args: argparse.Namespace) -> None:
+
+@click.command()
+@click.option('--setup', help='If set, creates the relevant tables in the given database')
+@click.option('--crawldir', '-d', help='Path to directory containing results of a GitHub crawl')
+@click.option('--batch-size', '-b', type=int, default=1000, help='Number of repositories to sync at a time (database transaction batching)')
+@click.option('--database', '-o', help='Path to database file')
+def handler(setup: str, crawldir: str, batch_size: int, database: str) -> None:
     """
     CLI handler for sync functionality
 
@@ -211,51 +217,13 @@ def handler(args: argparse.Namespace) -> None:
 
     Returns: None
     """
-    conn = sqlite3.connect(args.database)
+    conn = sqlite3.connect(database)
     try:
-        if args.setup:
+        if setup:
             setup_database(conn)
 
-        results = ordered_crawl(args.crawldir)
+        results = ordered_crawl(crawldir)
         tasks = unsynced_results(conn, results)
-        print(sync(conn, tasks, args.batch_size))
+        print(sync(conn, tasks, batch_size))
     finally:
         conn.close()
-
-def populator(parser: argparse.ArgumentParser) -> None:
-    """
-    Populates a CLI parser with sync parameters
-
-    Args:
-    parser
-        Argument parser representing sync functionality
-
-    Returns: None
-    """
-    parser.add_argument(
-        '--setup',
-        action='store_true',
-        help='If set, creates the relevant tables in the given database',
-    )
-    parser.add_argument(
-        '--crawldir',
-        '-d',
-        type=str,
-        required=True,
-        help='Path to directory containing results of a GitHub crawl',
-    )
-    parser.add_argument(
-        '--batch-size',
-        '-b',
-        type=int,
-        default=1000,
-        help='Number of repositories to sync at a time (database transaction batching)',
-    )
-    parser.add_argument(
-        '--database',
-        '-o',
-        type=str,
-        required=True,
-        help='Path to database file',
-    )
-    parser.set_defaults(func=handler)
