@@ -1,7 +1,15 @@
 import os
 import uuid
 from typing import Optional
+from importlib.machinery import SourceFileLoader
 
+MODULE_NAME = "mirror"
+
+module = SourceFileLoader(
+    MODULE_NAME, os.path.join(MODULE_NAME, "__init__.py")
+).load_module()
+
+module_version = module.__version__
 
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 LANGUAGES_DIR = os.environ.get("LANGUAGES_DIR")

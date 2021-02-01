@@ -10,11 +10,8 @@ from . import db_tool
 from pathlib import Path
 from typing import Tuple, Optional
 from datetime import datetime
+from .. import settings
  
-
-
-mirror_version = "0.1.1"
-
 
 def searching_all_files(directory: Path,extention):
 
@@ -82,7 +79,7 @@ def generate_datasets(result_dir: str, languages_file: str, languages_dir: str, 
         except Exception as err:
             print(f"Can't read languages file. Err: {err}")
 
-    output_folder = Path(result_dir) / chunk_output_folder
+    output_folder = Path(result_dir) / "snipets"
 
     output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -112,7 +109,7 @@ def generate_datasets(result_dir: str, languages_file: str, languages_dir: str, 
                 writer.writerow({'snipet' : chunk_path, 'lang': lang})
                 if sqlite_path:
                     db_tool.write_snipet_to_db(conn, chunk, lang)
-    config = json.dumps({"mirror version" : "0.1.1",
+    config = json.dumps({"mirror version" : settings.module_version,
                          "date": f"{datetime.datetime.now()}",
                          "langs_config":language_ext})
 
