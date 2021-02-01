@@ -10,32 +10,10 @@ from . import db_tool
 from pathlib import Path
 from typing import Tuple, Optional
 from datetime import datetime
+ 
 
 
-
-
-language_ext = {
-    "CoffeeScript": ".coffee",
-    "CSS": ".css",
-    "Dart": ".dart",
-    "Elixir": ".ex",
-    "Go": ".go",
-    "Groovy": ".groovy",
-    "HTML": ".html",
-    "Java": ".java",
-    "Kotlin": ".kt",
-    "Objective-C": ".m",
-    "Perl": ".pl",
-    "PHP": ".php",
-    "PowerShell": ".sh",
-    "Ruby": ".rb",
-    "JavaScript": ".js",
-    "Python": ".py",
-}
-
-chunk_output_folder = "test-chunk-3"
-
-mirror_version = "0.1"
+mirror_version = "0.1.1"
 
 
 def searching_all_files(directory: Path,extention):

@@ -1,9 +1,6 @@
 import sqlite3
 import traceback
 
-#database = r"C:\sqlite\db\pythonsqlite.db"
-
-
 
 
 def create_table_tasks(conn):
