@@ -106,9 +106,9 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
         headers = {'accept': 'application/vnd.github.v3+json',
                     'Authorization': f'token {GITHUB_TOKEN}'}
 
-        params = (('q','init_search_expresion'),('per_page',100))
+        params = (('q',init_search_expresion),('per_page',100))
 
-        search_url = f'https://api.github.com/search/repositories?q={init_search_expresion}&per_page=100'
+        search_url = f'https://api.github.com/search/repositories'
     
         search_response = request_with_limit(search_url, headers, min_rate_limit, params)
 
@@ -178,8 +178,8 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
                         
 
                         # parsing block
-                        params = (('q','init_search_expresion'),('per_page',100),('page',page))
-                        search_url = f'https://api.github.com/search/repositories?q={search_expresion}&per_page=100&page={page}'
+                        params = (('q',search_expresion),('per_page',100),('page',page))
+                        search_url = f'https://api.github.com/search/repositories'
 
                         search_response = request_with_limit(search_url, headers, min_rate_limit,params)
 
