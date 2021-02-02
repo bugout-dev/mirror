@@ -18,11 +18,11 @@ class Error(Exception):
     pass
 
 
-def request_with_limit(url, headers, min_rate_limit):
+def request_with_limit(url, headers, min_rate_limit, params):
     try:
         while True:
 
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, params=params)
         
             rate_limit_raw = response.headers.get(REMAINING_RATELIMIT_HEADER)
 
@@ -106,9 +106,11 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
         headers = {'accept': 'application/vnd.github.v3+json',
                     'Authorization': f'token {GITHUB_TOKEN}'}
 
+        params = (('q','init_search_expresion'),('per_page',100))
+
         search_url = f'https://api.github.com/search/repositories?q={init_search_expresion}&per_page=100'
     
-        search_response = request_with_limit(search_url, headers, min_rate_limit)
+        search_response = request_with_limit(search_url, headers, min_rate_limit, params)
 
         click.echo(f' initial request done {search_url}')
 
@@ -176,9 +178,10 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
                         
 
                         # parsing block
+                        params = (('q','init_search_expresion'),('per_page',100),('page',page))
                         search_url = f'https://api.github.com/search/repositories?q={search_expresion}&per_page=100&page={page}'
 
-                        search_response = request_with_limit(search_url, headers, min_rate_limit)
+                        search_response = request_with_limit(search_url, headers, min_rate_limit,params)
 
                         data = json.loads(search_response.text)
 
