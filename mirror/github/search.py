@@ -63,6 +63,13 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
     Search api have limitation 1000 results per search quary.
     For extract more results from search for each request we adding letters of the alphabet to the query parameter.
 
+    For languages file have next format. Languages name must match with the github.
+    {"languages":["lang1",
+                  "lang2",
+                  ......
+                  "langN"]
+    }
+
     """
 
     if GITHUB_TOKEN is None:
@@ -169,7 +176,7 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
                         
 
                         # parsing block
-                        request_url = f'https://api.github.com/search/repositories?q={search_expresion}&per_page=100&page={page}'
+                        search_url = f'https://api.github.com/search/repositories?q={search_expresion}&per_page=100&page={page}'
 
                         search_response = request_with_limit(search_url, headers, min_rate_limit)
 
