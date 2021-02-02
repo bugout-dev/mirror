@@ -5,6 +5,7 @@ import csv
 import json
 import time
 from pathlib import Path
+import urllib.parse
 import pandas as pd
 import string
 import traceback
@@ -18,11 +19,11 @@ class Error(Exception):
     pass
 
 
-def request_with_limit(url, headers, min_rate_limit, params):
+def request_with_limit(url, headers, min_rate_limit):
     try:
         while True:
 
-            response = requests.get(url, headers=headers, params=params)
+            response = requests.get(url, headers=headers)
         
             rate_limit_raw = response.headers.get(REMAINING_RATELIMIT_HEADER)
 
@@ -89,7 +90,9 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
     for language in languages:
 
         # create search expression
-        init_search_expresion = f'stars:{stars_expression}+language:{language.capitalize()}'
+        stars_encoding = urllib.parse.urlencode(f"stars:{stars_expression}")
+        lang_encoding = urllib.parse.urlencode(f"language:{language.capitalize()}")
+        init_search_expresion = f'{stars_encoding}+{lang_encoding}'
 
         # generate file name maybe need just search_python
         addition_naming = ''
@@ -106,10 +109,9 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
         headers = {'accept': 'application/vnd.github.v3+json',
                     'Authorization': f'token {GITHUB_TOKEN}'}
 
-        params = [('q',init_search_expresion),('per_page',100)]
 
-        search_url = f'https://api.github.com/search/repositories'
-    
+        search_url = f'https://api.github.com/search/repositories?q={init_search_expresion}&per_page=100'
+
         search_response = request_with_limit(search_url, headers, min_rate_limit, params)
 
         click.echo(f' initial request done {search_url}')
@@ -179,9 +181,10 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
 
                         # parsing block
                         params = [('q',search_expresion),('per_page',100),('page',page)]
-                        search_url = f'https://api.github.com/search/repositories'
 
-                        search_response = request_with_limit(search_url, headers, min_rate_limit,params)
+                        search_url = f'https://api.github.com/search/repositories?q={search_expresion}&per_page=100&page={page}'
+
+                        search_response = request_with_limit(search_url, headers, min_rate_limit)
 
                         data = json.loads(search_response.text)
 
