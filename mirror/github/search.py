@@ -72,10 +72,10 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
         try:
             langs_file = Path(languages_file)
             with langs_file.open('r', encoding='utf8') as langs:
-                langs_conf = json.load(langs.read())
+                langs_conf = json.load(langs)
             languages = langs_conf["languages"]
-        except :
-            print("Can't read langiages file.")
+        except Exception as err:
+            print("Can't read langiages file. {err}")
     else:
         languages= [language]
 
