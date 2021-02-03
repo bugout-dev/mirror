@@ -112,7 +112,7 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
 
         search_url = f'https://api.github.com/search/repositories?q={init_search_expresion}&per_page=100'
 
-        search_response = request_with_limit(search_url, headers, min_rate_limit, params)
+        search_response = request_with_limit(search_url, headers, min_rate_limit)
 
         click.echo(f' initial request done {search_url}')
 
