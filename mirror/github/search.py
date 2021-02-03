@@ -90,8 +90,8 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
     for language in languages:
 
         # create search expression
-        stars_encoding = urllib.parse.urlencode(f"stars:{stars_expression}")
-        lang_encoding = urllib.parse.urlencode(f"language:{language.capitalize()}")
+        stars_encoding = str(urllib.parse.urlencode(f"stars:{stars_expression}"))
+        lang_encoding = str(urllib.parse.urlencode(f"language:{language.capitalize()}"))
         init_search_expresion = f'{stars_encoding}+{lang_encoding}'
 
         # generate file name maybe need just search_python

@@ -83,13 +83,13 @@ def generate_datasets(result_dir: str, languages_file: str, languages_dir: str, 
 
     output_folder.mkdir(parents=True, exist_ok=True)
 
-    output_csv = output_folder / f"result_{chunksize}_rows_snipet_dataset.csv"
+    output_csv = Path(result_dir) / f"result_{chunksize}_rows_snipet_dataset.csv"
 
     with output_csv.open( mode='wt', encoding='utf8', newline='') as output:
         fnames = ['snipet', 'lang']
         writer = csv.DictWriter(output, fieldnames=fnames)
         writer.writeheader()   
-
+        index = 0
         for lang in language_ext:
             lang_path = Path(languages_folder) / lang
             if not lang_path.exists():
@@ -99,18 +99,25 @@ def generate_datasets(result_dir: str, languages_file: str, languages_dir: str, 
             # create chunks
             language_chunks = chunking(lang_path,language_ext[lang],chunksize)
 
-            
-            for index,chunk in enumerate(language_chunks):
+            for chunk in language_chunks:
 
-                chunk_path = output_folder / f"{index}.txt"
+                try:
 
-                with chunk_path.open('wt', encoding='utf-8') as chunk_file:
-                    chunk_file.write(chunk)
-                writer.writerow({'snipet' : chunk_path, 'lang': lang})
-                if sqlite_path:
-                    db_tool.write_snipet_to_db(conn, chunk, lang)
+                    chunk_path = output_folder / f"{index}.txt"
+
+                    with chunk_path.open('wt', encoding='utf-8') as chunk_file:
+                        chunk_file.write(chunk)
+                    writer.writerow({'snipet' : chunk_path, 'lang': lang})
+                    if sqlite_path:
+                        db_tool.write_snipet_to_db(conn, chunk, lang)
+
+                    index +=1
+                except Exception as err:
+                    print(err)
+                    continue
+
     config = json.dumps({"mirror version" : settings.module_version,
-                         "date": f"{datetime.datetime.now()}",
+                         "date": f"{datetime.now()}",
                          "langs_config":language_ext})
 
 

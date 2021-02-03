@@ -2,7 +2,6 @@ import sqlite3
 import traceback
 
 
-
 def create_table_tasks(conn):
     """ create a table from the create_table_sql statement
     :param conn: Connection object
