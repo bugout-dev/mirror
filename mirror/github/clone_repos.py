@@ -66,10 +66,11 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
     with click.progressbar(languages) as bar:        
         for lang in bar:
             try:
-                encoded_language = urllib.parse.quote(lang)
-                search_expresion = f'stars:{stars_expression}+language:{encoded_language.capitalize()}'
+                stars_encoding = str(urllib.parse.unquote_plus(f"stars:{stars_expression}"))
+                lang_encoding = str(urllib.parse.unquote_plus(f"language:{language.capitalize()}"))
+                query_search_expresion = f'{stars_encoding}+{lang_encoding}'
 
-                request_url = f'https://api.github.com/search/repositories?q={search_expresion}&per_page={amount}&page=1'
+                request_url = f'https://api.github.com/search/repositories?q={query_search_expresion}&per_page={amount}&page=1'
                 search_responce = requests.get(request_url, headers=headers)
 
                 rate_limit_raw = search_responce.headers.get(REMAINING_RATELIMIT_HEADER)
