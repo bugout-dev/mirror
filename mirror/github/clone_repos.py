@@ -58,16 +58,16 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
         try:
             langs_file = Path(languages_file)
             with langs_file.open('r', encoding='utf8') as langs:
-                langs_conf = json.load(langs.read())
+                langs_conf = json.load(langs)
             languages = langs_conf.keys()
-        except :
-            print("Can't read langiages file.")
+        except Exception as err:
+            print(f"Can't read langiages file. {err}")
 
     with click.progressbar(languages) as bar:        
         for lang in bar:
             try:
                 stars_encoding = str(urllib.parse.unquote_plus(f"stars:{stars_expression}"))
-                lang_encoding = str(urllib.parse.unquote_plus(f"language:{language.capitalize()}"))
+                lang_encoding = str(urllib.parse.unquote_plus(f"language:{lang.capitalize()}"))
                 query_search_expresion = f'{stars_encoding}+{lang_encoding}'
 
                 request_url = f'https://api.github.com/search/repositories?q={query_search_expresion}&per_page={amount}&page=1'
