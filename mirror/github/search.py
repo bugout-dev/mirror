@@ -121,7 +121,8 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
         # result pagination
         if not data.get('total_count'):
             click.echo(search_response.text)
-            return
+
+            continue
 
         # etract total count github limit is 10 page of search result
         page_amount = data['total_count']//100
