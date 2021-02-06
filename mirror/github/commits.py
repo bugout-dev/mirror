@@ -6,6 +6,7 @@ import csv
 import sys
 import json
 import time
+from utils import write_with_size
 from pathlib import Path
 import pandas as pd
 import string
@@ -14,38 +15,6 @@ import traceback
 
 
 REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
-
-
-def get_size(obj, seen=None):
-    """Recursively finds size of objects"""
-    size = sys.getsizeof(obj)
-    if seen is None:
-        seen = set()
-    obj_id = id(obj)
-    if obj_id in seen:
-        return 0
-    # Important mark as seen *before* entering recursion to gracefully handle
-    # self-referential objects
-    seen.add(obj_id)
-    if isinstance(obj, dict):
-        size += sum([get_size(v, seen) for v in obj.values()])
-        size += sum([get_size(k, seen) for k in obj.keys()])
-    elif hasattr(obj, '__dict__'):
-        size += get_size(obj.__dict__, seen)
-    elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
-        size += sum([get_size(i, seen) for i in obj])
-    return size
-
-
-def write_with_size(string,file_index, path):
-    """
-    Return current size after writing
-    """
-    file_path = path / f'commits_{file_index}.json'
-    with open(file_path, 'a', newline='') as file:
-        file.write(string)
-        size_of_file = file.tell()
-    return size_of_file
 
 
 
@@ -107,7 +76,9 @@ def commits(crawldir: str, repos_file: str, token: str, min_rate_limit: int):
 
     end_block = ']}'
 
-    
+    content_name = "commit"
+
+    ext = 'json'
 
     resolve_path = Path(crawldir)
 
@@ -121,7 +92,7 @@ def commits(crawldir: str, repos_file: str, token: str, min_rate_limit: int):
 
     file_index = 1
 
-    write_with_size(start_block,file_index,resolve_path)
+    write_with_size(start_block, content_name, file_index, resolve_path, ext)
 
     repo_amount = len(repos_data['data'])
     
@@ -138,17 +109,17 @@ def commits(crawldir: str, repos_file: str, token: str, min_rate_limit: int):
 
             repo_dump = json.dumps({repo['id']:commits_data})
 
-            current_size = write_with_size(repo_dump, file_index, resolve_path)
+            current_size = write_with_size(repo_dump, content_name, file_index, resolve_path, ext)
 
             if current_size >5000000:
                 
-                write_with_size(end_block, file_index, resolve_path)
+                write_with_size(end_block, content_name, file_index, resolve_path, ext)
                 file_index += 1
-                write_with_size(start_block, file_index, resolve_path)
+                write_with_size(start_block, content_name, file_index, resolve_path, ext)
             else:
                 if i != repo_amount - 1:
-                    write_with_size(',', file_index, resolve_path)
-    write_with_size(end_block, file_index, resolve_path) 
+                    write_with_size(',', content_name, file_index, resolve_path, ext)
+    write_with_size(end_block, content_name, file_index, resolve_path, ext) 
 
 
 if __name__ == "__main__":

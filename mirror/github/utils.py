@@ -5,6 +5,17 @@ import click
 from pathlib import Path
 
 
+def write_with_size(string, content_name, file_index, path, ext):
+    """
+    Return current size after writing
+    """
+    file_path = path / f'{content_name}_{file_index}.{ext}'
+    with open(file_path, 'a', newline='', encoding='utf8') as file:
+        file.write(string)
+        size_of_file = file.tell()
+    return size_of_file
+
+
 
 def flatten_json(y):
     out = {}
