@@ -62,7 +62,7 @@ def get_total_count(search_query, headers, min_rate_limit):
         return data.get('total_count')
 
 
-def write_repos(repos, alredy_parsed, date, files_counter, path, language):
+def write_repos(repos, alredy_parsed, date, files_counter, path, language, search_query):
 
     json_data = { 
         'data':[]
@@ -85,6 +85,7 @@ def write_repos(repos, alredy_parsed, date, files_counter, path, language):
 
     json_data["crawled_at"] = date
     json_data["language"] = language
+    json_data["search_query"] = search_query
 
     file_path = os.path.join(path, f"{files_counter}.json")
     
@@ -132,10 +133,13 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
     
     if languages_file:
         try:
-            langs_file = Path(languages_file)
+            langs_file = languages_file
+
             with langs_file.open('r', encoding='utf8') as langs:
                 langs_conf = json.load(langs)
+
             languages = langs_conf["languages"]
+
         except Exception as err:
             print("Can't read langiages file. {err}")
             if not language:
@@ -198,7 +202,13 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
 
                     files_counter += 1
 
-                    write_to_file(data, alredy_parsed, search_response.headers.get(DATETIME_HEADER), files_counter, crawldir, language):
+                    write_to_file(data,
+                                  alredy_parsed,
+                                  search_response.headers.get(DATETIME_HEADER),
+                                  files_counter,
+                                  crawldir,
+                                  language,
+                                  search_url):
  
                     page += 1
             except KeyboardInterrupt:
