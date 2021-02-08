@@ -5,11 +5,13 @@ import click
 from pathlib import Path
 
 
-def write_with_size(string, content_name, file_index, path, ext):
+def write_with_size(string, file_index, path):
     """
     Return current size after writing
     """
-    file_path = path / f'{content_name}_{file_index}.{ext}'
+
+    file_path = os.path.join(path, f"{file_index}.json")
+
     with open(file_path, 'a', newline='', encoding='utf8') as file:
         file.write(string)
         size_of_file = file.tell()
