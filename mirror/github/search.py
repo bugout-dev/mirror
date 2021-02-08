@@ -14,46 +14,95 @@ from typing import Optional
 from ..settings import GITHUB_TOKEN
 
 
+REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
+
+DATETIME_HEADER = 'Date'
+
 class Error(Exception):
     """Base class for exceptions in this module."""
     pass
 
 
 def request_with_limit(url, headers, min_rate_limit):
-    try:
-        while True:
 
-            response = requests.get(url, headers=headers)
+    while True:
+
+        response = requests.get(url, headers=headers)
+    
+        rate_limit_raw = response.headers.get(REMAINING_RATELIMIT_HEADER)
+
+        if rate_limit_raw is not None:
+            current_rate_limit = int(rate_limit_raw)
+            if current_rate_limit <= min_rate_limit:
+                
+                print('Rate limit is end. Awaiting 1 minute.')
+                time.sleep(60)
+            else:
+                break
+    return response
+
+
+def encode_query(stars_expression, language):
+    stars_encoding = str(urllib.parse.unquote_plus(f"stars:{stars_expression}"))
+    lang_encoding = str(urllib.parse.unquote_plus(f"language:{language.capitalize()}"))
+    return f'{stars_encoding}+{lang_encoding}'
+
+
+def get_total_count(search_query, headers, min_rate_limit):
         
-            rate_limit_raw = response.headers.get(REMAINING_RATELIMIT_HEADER)
+        search_url = f'https://api.github.com/search/repositories?q={search_query}&per_page=100'
 
-            if rate_limit_raw is not None:
-                current_rate_limit = int(rate_limit_raw)
-                if current_rate_limit <= min_rate_limit:
-                    
-                    print('Rate limit is end. Awaiting 1 minute.')
-                    time.sleep(60)
-                else:
-                    break
-        return response
-    except:
-        raise ('Broken request.')
+        search_response = request_with_limit(search_url, headers, min_rate_limit)
+
+        click.echo(f' initial request done {search_url}')
+
+        data = json.loads(search_response.text)
+
+        # result pagination
+        return data.get('total_count')
 
 
+def write_repos(repos, alredy_parsed, date, files_counter, path, language):
+
+    json_data = { 
+        'data':[]
+    }
+
+    repos = data['items']
 
 
-REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
+    for repo in repos:
+
+        if repo['id'] not in alredy_parsed:
+
+            json_data['data'].append(repo)
+        else:
+            continue
+
+        alredy_parsed.add(repo['id'])
+    
+    json_data["command"] = "search"
+
+    json_data["crawled_at"] = date
+    json_data["language"] = language
+
+    file_path = os.path.join(path, f"{files_counter}.json")
+    
+    with open(file_path, 'w+', newline='') as output_file:
+
+        print(f'Json: {len(json_data["data"])} {language} repo collected.')
+        json.dump(json_data, output_file)
+
+
 
 @click.command()
 @click.option('--crawldir', '-d', default='./', help='Path to save folder.', show_default=True)
 
-@click.option('--language', '-l', help='Language name for search.')
-
-@click.option('--stars_expression', '-st', help='Stars amount. "500" or ">500" or "<500"')
+@click.option('--stars_expression', '-s', help='Stars amount. "500" or ">500" or "<500"')
 
 @click.option('--token', '-t', help='Access token for increase rate limit. Read from env $GITHUB_TOKEN if specify.', default=None, show_default=True)
 
-@click.option('--min-rate-limit', '-r', type=int, default=30, help='Minimum remaining rate limit on API under which the crawl is interrupted')
+@click.option('--min-rate-limit', '-l', type=int, default=30, help='Minimum remaining rate limit on API under which the crawl is interrupted')
 
 @click.option('--languages-file', '-f', help='Path to json file with languages for extracting.')
 
@@ -72,6 +121,11 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
     }
 
     """
+    files_counter = 0
+
+    headers = {'accept': 'application/vnd.github.v3+json',
+               'Authorization': f'token {GITHUB_TOKEN}'}
+
 
     if GITHUB_TOKEN is None:
         click.echo(f'start with low rate limit')
@@ -84,136 +138,80 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
             languages = langs_conf["languages"]
         except Exception as err:
             print("Can't read langiages file. {err}")
+            if not language:
+                raise
     else:
         languages= [language]
+
 
     for language in languages:
 
         # create search expression
-        stars_encoding = str(urllib.parse.unquote_plus(f"stars:{stars_expression}"))
-        lang_encoding = str(urllib.parse.unquote_plus(f"language:{language.capitalize()}"))
-        init_search_expresion = f'{stars_encoding}+{lang_encoding}'
+        clear_search_query = encode_query(stars_expression, language)
 
-        # generate file name maybe need just search_python
-        addition_naming = ''
-        query_params = init_search_expresion.split('+')
-        for specify_string in query_params:
-            addition_naming += '_' + specify_string.replace(':','_').replace('<','less_then_').replace('>','more_then_')
+        total_count = get_total_count(search_query, headers, min_rate_limit):
 
-
-        file_name = f'repo_search_{addition_naming}.json'
-
-
-        #  make inital request 
-
-        headers = {'accept': 'application/vnd.github.v3+json',
-                    'Authorization': f'token {GITHUB_TOKEN}'}
-
-
-        search_url = f'https://api.github.com/search/repositories?q={init_search_expresion}&per_page=100'
-
-        search_response = request_with_limit(search_url, headers, min_rate_limit)
-
-        click.echo(f' initial request done {search_url}')
-
-        data = json.loads(search_response.text)
-
-        # result pagination
-        if not data.get('total_count'):
-            click.echo(search_response.text)
-
+        if not total_count:
             continue
-
-        # etract total count github limit is 10 page of search result
-        page_amount = data['total_count']//100
 
         alredy_parsed = set()
 
-        if data['total_count'] % 100:
+        # etract total count github limit is 10 page of search result
+        page_amount = total_count//100
+
+        if total_count % 100 and total_count < 1000:
             page_amount +=1
+
+
+        if not os.path.exists(crawldir):
+            os.makedirs(crawldir)
+
         
-        global_count = data['total_count']
+        for letter in list(string.ascii_lowercase):
 
-        # check exists
-        resolve_path = Path(crawldir)
+            page = 1
 
-        if not os.path.exists(resolve_path):
-            os.makedirs(resolve_path)
+            try:
 
-        # generate file path
-        file_path = resolve_path / file_name
-
-        file_exist = os.path.isfile(file_path)
-
-        file_modes = 'w+'
+                # limitation of search result
+                while len(alredy_parsed) <= global_count and page <= 10:
 
 
-        with open(file_path, file_modes, newline='') as output_file:
+                    
+                    if global_count > 1000:
+                        search_expresion = letter+'+' + clear_search_query
+                    else:
+                        search_expresion = clear_search_query
+                    
 
-    
-            # simple template object
-            json_data = { 
-                'data':[]
-            }
+                    # parsing block
+
+                    search_url = f'https://api.github.com/search/repositories?q={search_expresion}&per_page=100&page={page}'
+
+                    search_response = request_with_limit(search_url, headers, min_rate_limit)
+
+                    data = json.loads(search_response.text)
+
+
+                    if not data.get('items'):
+                        break
+
+                    files_counter += 1
+
+                    write_to_file(data, alredy_parsed, search_response.headers.get(DATETIME_HEADER), files_counter, crawldir, language):
+ 
+                    page += 1
+            except KeyboardInterrupt:
+                raise('CTRL+C')
+            except:
+                traceback.print_exc()
+                raise
             
-            # Put letter by letter to search query
-            #
+            if global_count<=1000:
+                break
             
-            for letter in list(string.ascii_lowercase):
+        
 
-                page = 1
-
-                try:
-
-                    # limitation of search result
-                    while len(alredy_parsed) <= global_count and page <= 10:
-
-
-                        
-                        if global_count > 1000:
-
-
-                            search_expresion = letter+'+' + init_search_expresion
-                        
-                        else:
-                            
-                            search_expresion = init_search_expresion
-                        
-
-                        # parsing block
-                        params = [('q',search_expresion),('per_page',100),('page',page)]
-
-                        search_url = f'https://api.github.com/search/repositories?q={search_expresion}&per_page=100&page={page}'
-
-                        search_response = request_with_limit(search_url, headers, min_rate_limit)
-
-                        data = json.loads(search_response.text)
-
-
-                        if not data.get('items'):
-                            break
-
-                        repos = data['items']
-
-
-                        for repo in repos:
-
-                            if repo['id'] not in alredy_parsed:
-
-                                json_data['data'].append(repo)
-                            else:
-                                continue
-
-                            alredy_parsed.add(repo['id'])
-                        
-                        page += 1
-                except:
-                    traceback.print_exc()
-
-            
-            
-            print(f'Json: {len(json_data["data"])} {language} repo collected.')
-            json.dump(json_data, output_file)
         
 if __name__ == "__main__":
     popular_repos()

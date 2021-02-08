@@ -82,6 +82,7 @@ def crawl(start_id: int, max_id: int, interval: float, min_rate_limit: int) -> D
 
     result['max_id'] = since
     result['end'] = int(time.time())
+    result['command'] = "crawl"
     result['ending_rate_limit'] = curr_rate_limit
 
     return result

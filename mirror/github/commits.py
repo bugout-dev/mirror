@@ -39,7 +39,7 @@ def request_with_limit(repo, headers, min_rate_limit):
         raise ('Broken request.')
 
 @click.command()
-@click.option('--crawldir', '-p', default='.', help='Path to save folder. default="." ')
+@click.option('--crawldir', '-d', default='.', help='Path to save folder. default="." ')
 
 @click.option('--repos-file', '-f', help='Input repos file.')
 

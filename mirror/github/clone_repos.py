@@ -15,7 +15,7 @@ REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.option('--crawldir', '-d', default='.', help='Dir for cloned repos.', show_default=True)
 @click.option('--stars-expression', '-s', default='>500', help='Stars search condition. ">200" / "=400" / "<300" as example.', show_default=True)
-@click.option('--languages', '-ls', nargs=0, help="Specify languages for extraction. Mirror ignoring that parametr if languages file is specified.")
+@click.option('--languages', '-L', nargs=0, help="Specify languages for extraction. Mirror ignoring that parametr if languages file is specified.")
 @click.argument('languages', nargs=-1)
 @click.option('--token', '-t', help='Access token for increase rate limit. Read from $GITHUB_TOKEN if specify.', default='', show_default=True)
 @click.option('--amount', '-n', help='Amount of repo.', type=int, default=50, show_default=True)
