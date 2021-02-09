@@ -5,13 +5,13 @@ import csv
 import sys
 import json
 import time
-import click
 import string
-import requests
 import traceback
-import pandas as pd
 from pathlib import Path
 from typing import Optional
+
+import requests
+import click
 
 from .utils import write_with_size
 
@@ -120,7 +120,7 @@ def get_repos_files(repos_dir, start_id, end_id):
 
 @click.option('--min-rate-limit', '-l', type=int, default=30, help='Minimum remaining rate limit on API under which the crawl is interrupted')
 
-def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos_dir: str, token: str, min_rate_limit: int):
+def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos_dir: str, token: Optional[str], min_rate_limit: int):
 
     """
     Read repos json file and upload all commits for that repos one by one.
@@ -132,7 +132,7 @@ def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos
 
     if not token:
         if os.environ.get('github_token'):
-            token= os.environ.get('github_token')
+            token = os.environ.get('github_token')
         else:
             click.echo(f'start with low rate limit')
     

@@ -1,8 +1,9 @@
+import os
 import csv
 import json
-import os
-import click
 from pathlib import Path
+
+import click
 
 
 def write_with_size(string, file_index, path):

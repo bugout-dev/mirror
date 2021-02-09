@@ -1,16 +1,23 @@
-import requests
-import click
-import pygit2
 import os
 import json
+import time
 import traceback
 import urllib.parse
 from typing import Tuple
 from pathlib import Path
 
+
+import click
+import pygit2 # type: ignore
+import requests
+
 from ..settings import GITHUB_TOKEN
 
 REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
+
+class ConfigReadError(Exception):
+    """Raised when the input value is too small"""
+    pass
 
 def request_with_limit(url, headers, min_rate_limit):
 
@@ -84,7 +91,7 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
             
             languages = langs_conf.keys()
         except Exception as err:
-            raise(f"Can't read langiages file. {err}")
+            raise ConfigReadError(f"Can't read langiages file. {err}")
 
     with click.progressbar(languages) as bar:        
         for lang in bar:
@@ -108,7 +115,7 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
                     if GITHUB_TOKEN:
                         git_url = "".join(("https://",GITHUB_TOKEN,'@',git_url.split('//')[1]))
 
-                    print(repo["name"])
+                    print(f"Repository name: {repo['name']}")
                     out_path = os.path.join(crawldir, lang.capitalize(), repo["name"])
 
                     if not os.path.exists(out_path):
@@ -119,7 +126,7 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
                     pygit2.clone_repository(git_url, out_path)
             
             except KeyboardInterrupt:
-                raise('CTRL+C')
+                raise KeyboardInterrupt('CTRL+C')
                         
             except:
                 traceback.print_exc()

@@ -1,6 +1,6 @@
-from mirror.github.clone_repos import clone_repos
+import os
 
-import os 
+from mirror.github.clone_repos import clone_repos
 
 language_ext = {
     "CoffeeScript": ".coffee",

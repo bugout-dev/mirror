@@ -9,7 +9,7 @@ import sqlite3
 import sys
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
-from tqdm import tqdm
+from tqdm import tqdm # type: ignore
 import click
 from .allrepos import ordered_crawl
 

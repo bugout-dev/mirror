@@ -18,7 +18,7 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, TextIO, Tuple
 import click
 
 import requests
-from tqdm import tqdm
+from tqdm import tqdm # type: ignore
 
 from ..populate import populate_cli
 
@@ -103,7 +103,7 @@ def crawl(start_id: int, max_id: int, interval: float, min_rate_limit: int) -> D
 
 @click.option('--crawldir', '-d', help='Path to directory in which crawl results should be written')
 
-def crawl_handler(start_id: str, max_id: int, interval: float, min_rate_limit: int, batch_size: int, crawldir: str) -> None:
+def crawl_handler(start_id: int, max_id: int, interval: float, min_rate_limit: int, batch_size: int, crawldir: str) -> None:
     """
     Processes arguments as parsed from the command line and uses them to run a crawl of the GitHub
     /repositories endpoint.
@@ -316,8 +316,8 @@ def sample(crawl_batches: List[str], choose_probability: float) -> Iterator[Dict
         'Uses the batch whose starting GitHub ID is the smallest one greater than --from-id.'
     )
 )
-@click.option('--to-id', type=int, default=None, help='GitHub ID to end sampling at (default: None)') # exception may
-def sample_handler(crawldir: str, outfile: click.File('w'), probability: float, from_id: int,  to_id: str) -> None:
+@click.option('--to-id', type=int, default=None, help='GitHub ID to end sampling at (default: None)')
+def sample_handler(crawldir: str, outfile, probability: float, from_id: int,  to_id: str) -> None:
     """
     Writes repositories sampled from a crawl directory to an output file in JSON lines format
 

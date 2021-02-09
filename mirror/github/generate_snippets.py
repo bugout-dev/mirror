@@ -3,18 +3,24 @@ import os
 import sys
 import csv
 import json
-import click
 import base64
 import sqlite3
 import itertools
-from . import db_tool
 from pathlib import Path
-from .utils import write_with_size
-from typing import Tuple, Optional
 from datetime import datetime
-from .. import settings
+from typing import Tuple, Optional
 
- 
+import click
+
+from . import db_tool
+from .. import settings
+from .utils import write_with_size
+
+
+
+class ReadReposDirectoryError(Exception):
+    """Raised when repos folder not set."""
+    pass
 
 def searching_all_files(directory, extention: str):
 
@@ -50,7 +56,7 @@ def chunking(lang_path, ext: str, chunksize: int):
                     if next_n_lines:
                         corpus.append("".join([i for i in next_n_lines if i]))
         except KeyboardInterrupt:
-            raise('CTRL+C')
+            raise KeyboardInterrupt('CTRL+C')
         except:
             continue
     return corpus
@@ -63,13 +69,15 @@ def chunking(lang_path, ext: str, chunksize: int):
 @click.option('--languages-dir', '-L', help='Path to directory with languages repos.')
 @click.option('--chunksize', '-s', type=int, default=10, help='Size of code snipet.')
 @click.option('--sqlite-path', '-q', help='Sqlite for writing snippets.', default = None,  show_default=True)
-def generate_datasets(result_dir: str, languages_file: str, languages_dir: str, chunksize: int, sqlite_path: Optional[str]):
+def generate_datasets(result_dir: str, languages_file: str, languages_dir: Optional[str], chunksize: int, sqlite_path: Optional[str]):
     
 
     file_size_limit = 500000
 
     if not languages_dir:
         languages_dir = os.environ.get('LANGUAGES_REPOS')
+        if not languages_dir:
+            raise ReadReposDirectoryError('LANGUAGES_REPOS not set.')
 
 
     if sqlite_path:
@@ -128,7 +136,7 @@ def generate_datasets(result_dir: str, languages_file: str, languages_dir: str, 
                 os.makedirs(output_lang_dir)
 
             language_chunks = chunking(lang_path,languages_ext[lang],chunksize)
-            print(len(language_chunks))
+            print(f"Crated {len(language_chunks)} {lang} chanks.")
 
             if not language_chunks:
                 continue
@@ -139,7 +147,9 @@ def generate_datasets(result_dir: str, languages_file: str, languages_dir: str, 
 
                 try:
                     # writing and return file size
-                    current_size =  write_with_size( f'"{base64.b64encode(chunk.encode("utf8"))}"', file_index, output_lang_dir)
+                    current_size =  write_with_size(''.join(('"',str(base64.b64encode(chunk.encode("utf8"))),'"')),
+                                                    file_index,
+                                                    output_lang_dir)
                     
                     # add path csv
                     writer.writerow({'snipet' : os.path.join("snippets", lang.capitalize(), f"{file_index}.json"),
@@ -163,7 +173,7 @@ def generate_datasets(result_dir: str, languages_file: str, languages_dir: str, 
                     chunk_index += 1
                 
                 except KeyboardInterrupt:
-                    raise('CTRL+C')
+                    raise KeyboardInterrupt('CTRL+C')
 
                 except Exception as err:
                     print(err)

@@ -11,7 +11,7 @@ import time
 from typing import Any, Dict, List
 
 import requests
-from tqdm import tqdm
+from tqdm import tqdm # type: ignore
 
 subcommand = "licenses"
 

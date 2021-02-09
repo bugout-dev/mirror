@@ -4,8 +4,6 @@ cffi==1.14.4
 chardet==4.0.0
 click==7.1.2
 idna==2.10
-numpy==1.20.0
-pandas==1.2.1
 pycparser==2.20
 pygit2==1.5.0
 python-dateutil==2.8.1

@@ -1,15 +1,16 @@
-import requests
-import click
 import os
 import csv
 import json
 import time
-from pathlib import Path
-import urllib.parse
-import pandas as pd
 import string
 import traceback
-from typing import Optional
+import urllib.parse
+from pathlib import Path
+from typing import Optional, Tuple
+
+
+import click
+import requests
 
 from ..settings import GITHUB_TOKEN
 
@@ -134,18 +135,15 @@ def popular_repos(languages: tuple, stars_expression: str, crawldir: str, token:
         click.echo(f'start with low rate limit')
     
     if languages_file:
-        try:
-            langs_file = languages_file
 
-            with langs_file.open('r', encoding='utf8') as langs:
+        try:
+            with open(languages_file, 'r', encoding='utf8') as langs:
                 langs_conf = json.load(langs)
 
             languages = langs_conf["languages"]
 
         except Exception as err:
             print("Can't read langiages file. {err}")
-            if not language:
-                raise
 
 
     for language in languages:
@@ -158,7 +156,7 @@ def popular_repos(languages: tuple, stars_expression: str, crawldir: str, token:
         if not total_count:
             continue
 
-        alredy_parsed = set()
+        alredy_parsed: set = set()
 
         # etract total count github limit is 10 page of search result
         page_amount = total_count//100
@@ -212,7 +210,7 @@ def popular_repos(languages: tuple, stars_expression: str, crawldir: str, token:
  
                     page += 1
             except KeyboardInterrupt:
-                raise('CTRL+C')
+                raise KeyboardInterrupt('CTRL+C')
             except:
                 traceback.print_exc()
                 raise
