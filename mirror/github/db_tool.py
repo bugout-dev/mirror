@@ -8,7 +8,7 @@ def create_table_tasks(conn):
     :param create_table_sql: a CREATE TABLE statement
     :return:
     """
-    sql_create_snipets_table = """ CREATE TABLE IF NOT EXISTS snipets (
+    sql_create_snippets_table = """ CREATE TABLE IF NOT EXISTS snippets (
                                         id integer PRIMARY KEY,
                                         snipet text NOT NULL,
                                         lang text
@@ -17,7 +17,7 @@ def create_table_tasks(conn):
 
     try:
         c = conn.cursor()
-        c.execute(sql_create_snipets_table)
+        c.execute(sql_create_snippets_table)
         conn.commit()
     except Exception as e:
         traceback.print_exc()
@@ -40,7 +40,7 @@ def create_connection(db_file):
 
 def write_snipet_to_db(conn, snipet, lang):
     sql = """
-            INSERT OR IGNORE INTO snipets (snipet,lang) VALUES(?,?);
+            INSERT OR IGNORE INTO snippets (snipet,lang) VALUES(?,?);
           """
     try:
         c = conn.cursor()
