@@ -161,6 +161,10 @@ def generate_datasets(result_dir: str, languages_file: str, languages_dir: str, 
                             write_with_size(',', file_index, output_lang_dir)
 
                     chunk_index += 1
+                
+                except KeyboardInterrupt:
+                    raise('CTRL+C')
+
                 except Exception as err:
                     print(err)
                     continue

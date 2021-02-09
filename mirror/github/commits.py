@@ -105,9 +105,9 @@ def get_repos_files(repos_dir, start_id, end_id):
 
 @click.command()
 
-@click.option('--start-id', '-s', type=int, default=None, help='Last ID seen in GitHub all repos crawl; current crawl will start from its successor')
+@click.option('--start-id', '-s', type=int, default=None, help='Start repo id for crawl command output.')
 
-@click.option('--end-id', '-m', type=int, default=None, help='Crawl should extend to this idea (and no more than one page further)')
+@click.option('--end-id', '-m', type=int, default=None, help='End repo id. You need to specify both parameters start and end id. ')
 
 @click.option('--crawldir', '-d', default='.', help='Path to save folder. default="." ')
 
@@ -144,11 +144,11 @@ def commits(start-id: Optional[int], end-id: Optional[int], crawldir: str, repos
 
     
     # 2 output idexing csv and commits
+
     csv_out = os.join.path(crawldir, 'id_indexes.csv')
 
     commits_out = os.join.path(crawldir, "commits")
     
-
 
     with click.progressbar(files_for_proccessing) as bar, open(csv_out, mode='wt', encoding='utf8', newline='') as output:
 

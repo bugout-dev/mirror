@@ -12,6 +12,31 @@ from ..settings import GITHUB_TOKEN
 
 REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
 
+def request_with_limit(url, headers, min_rate_limit):
+
+    while True:
+
+        response = requests.get(url, headers=headers)
+    
+        rate_limit_raw = response.headers.get(REMAINING_RATELIMIT_HEADER)
+
+        if rate_limit_raw is not None:
+            current_rate_limit = int(rate_limit_raw)
+            if current_rate_limit <= min_rate_limit:
+                
+                print('Rate limit is end. Awaiting 1 minute.')
+                time.sleep(60)
+            else:
+                break
+    return response
+
+
+def encode_query(stars_expression, language):
+    stars_encoding = str(urllib.parse.unquote_plus(f"stars:{stars_expression}"))
+    lang_encoding = str(urllib.parse.unquote_plus(f"language:{language.capitalize()}"))
+    return f'{stars_encoding}+{lang_encoding}'
+
+
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.option('--crawldir', '-d', default='.', help='Dir for cloned repos.', show_default=True)
 @click.option('--stars-expression', '-s', default='>500', help='Stars search condition. ">200" / "=400" / "<300" as example.', show_default=True)
@@ -47,42 +72,30 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
     
     headers = {'accept': 'application/vnd.github.v3+json',
                 'Authorization': f'token {GITHUB_TOKEN}'}
-    
 
-    resolve_path = Path(crawldir)
-
-    if not os.path.exists(resolve_path):
-        os.makedirs(resolve_path)
+    if not os.path.exists(crawldir):
+        os.makedirs(crawldir)
 
     if languages_file:
         try:
-            langs_file = Path(languages_file)
-            with langs_file.open('r', encoding='utf8') as langs:
+
+            with open(languages_file, 'r', encoding='utf8') as langs:
                 langs_conf = json.load(langs)
+            
             languages = langs_conf.keys()
         except Exception as err:
-            print(f"Can't read langiages file. {err}")
+            raise(f"Can't read langiages file. {err}")
 
     with click.progressbar(languages) as bar:        
         for lang in bar:
             try:
-                stars_encoding = str(urllib.parse.unquote_plus(f"stars:{stars_expression}"))
-                lang_encoding = str(urllib.parse.unquote_plus(f"language:{lang.capitalize()}"))
-                query_search_expresion = f'{stars_encoding}+{lang_encoding}'
 
-                request_url = f'https://api.github.com/search/repositories?q={query_search_expresion}&per_page={amount}&page=1'
-                search_responce = requests.get(request_url, headers=headers)
+                
+                query_search_expresion = encode_query(stars_expression, lang)
 
-                rate_limit_raw = search_responce.headers.get(REMAINING_RATELIMIT_HEADER)
+                request_url = f'https://api.github.com/search/repositories?q={query_search_expresion}&per_page={amount}&page=1
 
-                try:
-                    if rate_limit_raw is not None:
-                        current_rate_limit = int(rate_limit_raw)
-                        if current_rate_limit <= 1:
-                            raise ('Rate limit is end.')
-                except:
-                    raise ('Broken request.')
-
+                search_response = request_with_limit(search_url, headers, 5)
 
                 data = json.loads(search_responce.text)
 
@@ -99,7 +112,8 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
                         git_url = "".join(("https://",GITHUB_TOKEN,'@',git_url.split('//')[1]))
 
                     print(repo["name"])
-                    out_path = resolve_path / lang.capitalize() / repo["name"]
+                    out_path = os.path.join(resolve_path, lang.capitalize(), repo["name"])
+
                     if not os.path.exists(out_path):
                         os.makedirs(out_path)
                     else:
@@ -108,6 +122,9 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
                         pygit2.clone_repository(git_url, out_path)
                     except Exception as err:
                         print(err)
+            
+            except KeyboardInterrupt:
+                raise('CTRL+C')
                         
             except:
                 traceback.print_exc()
