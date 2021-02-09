@@ -62,7 +62,7 @@ def get_total_count(search_query, headers, min_rate_limit):
         return data.get('total_count')
 
 
-def write_repos(repos, alredy_parsed, date, files_counter, path, language, search_query):
+def write_repos(data, alredy_parsed, date, files_counter, path, language, search_query):
 
     json_data = { 
         'data':[]
@@ -90,8 +90,6 @@ def write_repos(repos, alredy_parsed, date, files_counter, path, language, searc
     file_path = os.path.join(path, f"{files_counter}.json")
     
     with open(file_path, 'w+', newline='') as output_file:
-
-        print(f'Json: {len(json_data["data"])} {language} repo collected.')
         json.dump(json_data, output_file)
 
 
@@ -103,11 +101,15 @@ def write_repos(repos, alredy_parsed, date, files_counter, path, language, searc
 
 @click.option('--token', '-t', help='Access token for increase rate limit. Read from env $GITHUB_TOKEN if specify.', default=None, show_default=True)
 
+@click.option('--languages', '-L', nargs=0, help="Specify languages for extraction. Mirror ignoring that parametr if languages file is specified.")
+
+@click.argument('languages', nargs=-1)
+
 @click.option('--min-rate-limit', '-l', type=int, default=30, help='Minimum remaining rate limit on API under which the crawl is interrupted')
 
 @click.option('--languages-file', '-f', help='Path to json file with languages for extracting.')
 
-def popular_repos(language: str, stars_expression: str, crawldir: str, token: Optional[str], min_rate_limit: int, languages_file: str):
+def popular_repos(languages: tuple, stars_expression: str, crawldir: str, token: Optional[str], min_rate_limit: int, languages_file: str):
 
     """
     Crawl via search api.
@@ -144,16 +146,14 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
             print("Can't read langiages file. {err}")
             if not language:
                 raise
-    else:
-        languages= [language]
 
 
     for language in languages:
 
         # create search expression
-        clear_search_query = encode_query(stars_expression, language)
+        init_search_query = encode_query(stars_expression, language)
 
-        total_count = get_total_count(search_query, headers, min_rate_limit):
+        total_count = get_total_count(init_search_query, headers, min_rate_limit)
 
         if not total_count:
             continue
@@ -178,14 +178,14 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
             try:
 
                 # limitation of search result
-                while len(alredy_parsed) <= global_count and page <= 10:
+                while len(alredy_parsed) <= total_count and page <= 10:
 
 
                     
-                    if global_count > 1000:
-                        search_expresion = letter+'+' + clear_search_query
+                    if total_count > 1000:
+                        search_expresion = letter+'+' + init_search_query
                     else:
-                        search_expresion = clear_search_query
+                        search_expresion = init_search_query
                     
 
                     # parsing block
@@ -202,13 +202,13 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
 
                     files_counter += 1
 
-                    write_to_file(data,
+                    write_repos(data,
                                   alredy_parsed,
                                   search_response.headers.get(DATETIME_HEADER),
                                   files_counter,
                                   crawldir,
                                   language,
-                                  search_url):
+                                  search_url)
  
                     page += 1
             except KeyboardInterrupt:
@@ -217,7 +217,7 @@ def popular_repos(language: str, stars_expression: str, crawldir: str, token: Op
                 traceback.print_exc()
                 raise
             
-            if global_count<=1000:
+            if total_count<=1000:
                 break
             
         

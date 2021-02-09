@@ -13,7 +13,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Optional
 
-from utils import write_with_size
+from .utils import write_with_size
 
 
 REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
@@ -54,6 +54,9 @@ def request_with_limit(repo, headers, min_rate_limit):
                 time.sleep(60)
             else:
                 break
+        else:
+            raise('incorrect commit URL')
+    return response
 
 
 def read_command_type(path):
@@ -61,7 +64,7 @@ def read_command_type(path):
     Return type of command wich generated repos inside repos folder
     """
     with open(path, 'r', encoding='utf8') as first_file:
-        data = json.loads(first_file.read)
+        data = json.loads(first_file.read())
     return data["command"]
 
 
@@ -77,10 +80,10 @@ def get_repos_files(repos_dir, start_id, end_id):
 
     dir_files = os.listdir(repos_dir)
 
-    if not list_dir:
+    if not dir_files:
         raise('Empty repos dir.')
 
-    result_command_type = read_command_type(os.path.join(craw, dir_files[0]))
+    result_command_type = read_command_type(os.path.join(repos_dir, dir_files[0]))
 
     if start_id and end_id and  result_command_type == "crawl":
 
@@ -100,7 +103,7 @@ def get_repos_files(repos_dir, start_id, end_id):
             end_index = dir_files.index(f"{nerest_end_id}.json")+2
     
     else:
-        return list_dir
+        return dir_files
 
 
 @click.command()
@@ -117,7 +120,7 @@ def get_repos_files(repos_dir, start_id, end_id):
 
 @click.option('--min-rate-limit', '-l', type=int, default=30, help='Minimum remaining rate limit on API under which the crawl is interrupted')
 
-def commits(start-id: Optional[int], end-id: Optional[int], crawldir: str, repos_dir: str, token: str, min_rate_limit: int):
+def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos_dir: str, token: str, min_rate_limit: int):
 
     """
     Read repos json file and upload all commits for that repos one by one.
@@ -145,9 +148,12 @@ def commits(start-id: Optional[int], end-id: Optional[int], crawldir: str, repos
     
     # 2 output idexing csv and commits
 
-    csv_out = os.join.path(crawldir, 'id_indexes.csv')
+    csv_out = os.path.join(crawldir, 'id_indexes.csv')
 
-    commits_out = os.join.path(crawldir, "commits")
+    commits_out = os.path.join(crawldir, "commits")
+
+    if not os.path.exists(commits_out):
+        os.makedirs(commits_out)
     
 
     with click.progressbar(files_for_proccessing) as bar, open(csv_out, mode='wt', encoding='utf8', newline='') as output:
@@ -164,7 +170,7 @@ def commits(start-id: Optional[int], end-id: Optional[int], crawldir: str, repos
             if not repos:
                 continue
 
-            write_with_size(start_block, content_name, file_index, commits_out, ext)
+            write_with_size(start_block, file_index, commits_out)
     
             for repo in repos:
 
@@ -181,7 +187,7 @@ def commits(start-id: Optional[int], end-id: Optional[int], crawldir: str, repos
 
                 # Indexing
                 writer.writerow({'file' : os.path.join(commits_out, f"{file_index}.json"),
-                                 'repo_id': repo['id'])
+                                 'repo_id': repo['id']})
                 
                 current_size = write_with_size(repo_dump, file_index, commits_out)
 

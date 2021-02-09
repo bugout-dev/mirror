@@ -88,22 +88,19 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
 
     with click.progressbar(languages) as bar:        
         for lang in bar:
-            try:
 
-                
+            try:
+                    
                 query_search_expresion = encode_query(stars_expression, lang)
 
-                request_url = f'https://api.github.com/search/repositories?q={query_search_expresion}&per_page={amount}&page=1
+                request_url = f'https://api.github.com/search/repositories?q={query_search_expresion}&per_page={amount}&page=1'
 
-                search_response = request_with_limit(search_url, headers, 5)
+                search_response = request_with_limit(request_url, headers, 5)
 
-                data = json.loads(search_responce.text)
+                data = json.loads(search_response.text)
 
                 if not data.get("items"):
                     break
-
-                
-                print(resolve_path)
 
                 for repo in data["items"]:
                     git_url = repo['git_url']
@@ -112,16 +109,14 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
                         git_url = "".join(("https://",GITHUB_TOKEN,'@',git_url.split('//')[1]))
 
                     print(repo["name"])
-                    out_path = os.path.join(resolve_path, lang.capitalize(), repo["name"])
+                    out_path = os.path.join(crawldir, lang.capitalize(), repo["name"])
 
                     if not os.path.exists(out_path):
                         os.makedirs(out_path)
                     else:
                         continue
-                    try:
-                        pygit2.clone_repository(git_url, out_path)
-                    except Exception as err:
-                        print(err)
+
+                    pygit2.clone_repository(git_url, out_path)
             
             except KeyboardInterrupt:
                 raise('CTRL+C')

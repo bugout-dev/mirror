@@ -49,7 +49,7 @@ python -m mirror.cli crawl \
 Say you need to extract only a small pool of repositories for analysis then you can set more precise criteria that you need via `search` command. 
 
 ```bash
-python -m mirror.cli search --crawldir "$MIRROR_CRAWL_DIR/search" -l "python" -st ">500" -r 5
+python -m mirror.cli search --crawldir "$MIRROR_CRAWL_DIR/search" -L "python" -s ">500" -l 5
 ```
 
 ### Clone repos to local machine for analysis
@@ -57,7 +57,7 @@ python -m mirror.cli search --crawldir "$MIRROR_CRAWL_DIR/search" -l "python" -s
 The `clone` command uses the standard `git clone` to extract search results of repositories and clones to local machine.
 
 ```bash
-python -m mirror.cli clone --crawldir "$LANGUAGES_DIR" -s ">500" -ls "python"
+python -m mirror.cli clone --crawldir "$LANGUAGES_DIR" -s ">500" -L "python"
 ```
 
 Structure of `$LANGUAGES_DIR` directory:
@@ -82,9 +82,7 @@ Also, there is possibility to upload popular repositories with python code. See 
 Command `commits` extract all commits from repository and save `.json` files with commits for each repository.
 
 ```bash
-python -m mirror.cli commits \
-  --crawldir $MIRROR_CRAWL_DIR \
-  --repos-file $MIRROR_CRAWL_INTERVAL_SECONDS \
+python -m mirror.cli commits -d "$MIRROR_CRAWL_DIR\commits" -l 5 -r "$MIRROR_CRAWL_DIR/search"
 ```
 
 
@@ -94,4 +92,10 @@ It creates `.csv` file with flat json structure.
 
 ```bash
 python -m mirror.github.utils --json-files-folder "$MIRROR_CRAWL_DIR" --output-csv "$MIRROR_CRAWL_DIR/output.csv" --command commits
+```
+
+### Generate snippets dataset from downloaded repo
+```bash
+python -m mirror.github.generate_snippets -r "$OUTPUT_DIR" -f "examples/languages.json" -L "$LANGUAGES_DIR"
+
 ```

@@ -16,15 +16,15 @@ from .. import settings
 
  
 
-def searching_all_files(directory: Path,extention):
+def searching_all_files(directory, extention: str):
 
     """
     return list of file path inside folder
     """
 
     file_list = [] # A list for storing files existing in directories
-
-    for x in directory.iterdir():
+    dir = Path(directory)
+    for x in dir.iterdir():
         if x.is_file() and extention in x.name:
 
            file_list.append(x)
@@ -32,12 +32,12 @@ def searching_all_files(directory: Path,extention):
             continue
         else:
 
-           file_list.extend(searching_all_files(directory/x,extention))
+           file_list.extend(searching_all_files(dir/x,extention))
 
     return file_list
 
 
-def chunking(lang_path, ext, chunksize):
+def chunking(lang_path, ext: str, chunksize: int):
 
     """
     Create chunks from given file extemtion and language
@@ -49,7 +49,8 @@ def chunking(lang_path, ext, chunksize):
                 for next_n_lines in itertools.zip_longest(*[file_text] * chunksize):
                     if next_n_lines:
                         corpus.append("".join([i for i in next_n_lines if i]))
-        
+        except KeyboardInterrupt:
+            raise('CTRL+C')
         except:
             continue
     return corpus
@@ -59,16 +60,16 @@ def chunking(lang_path, ext, chunksize):
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.option('--result-dir', '-r', default='.', help='Dir for data.', show_default=True)
 @click.option('--languages-file', '-f', help='Path to json file with languages for extracting.', required = True)
-@click.option('--languages-dir', '-ld', help='Path to directory with languages repos.')
-@click.option('--chunksize', '-cs', type=int, default=10, help='Size of code snipet.')
-@click.option('--sqlite-path', '-sq', help='Sqlite for writing snippets.', default = None,  show_default=True)
+@click.option('--languages-dir', '-L', help='Path to directory with languages repos.')
+@click.option('--chunksize', '-s', type=int, default=10, help='Size of code snipet.')
+@click.option('--sqlite-path', '-q', help='Sqlite for writing snippets.', default = None,  show_default=True)
 def generate_datasets(result_dir: str, languages_file: str, languages_dir: str, chunksize: int, sqlite_path: Optional[str]):
     
 
     file_size_limit = 500000
 
     if not languages_dir:
-        languages_folder = os.environ.get('LANGUAGES_REPOS')
+        languages_dir = os.environ.get('LANGUAGES_REPOS')
 
 
     if sqlite_path:
@@ -100,11 +101,11 @@ def generate_datasets(result_dir: str, languages_file: str, languages_dir: str, 
 
     end_block = ']}'
 
-    output_csv = os.path.join(result_dir, f"{chunksize}_rows_snipet_dataset.csv")
+    output_csv = Path(result_dir) / f"{chunksize}_rows_snipet_dataset.csv"
 
 
 
-    with output_csv.open( mode='wt', encoding='utf8', newline='') as output:
+    with open(output_csv, mode='wt', encoding='utf8', newline='') as output:
 
         fnames = ['snipet', 'index', 'lang']
         writer = csv.DictWriter(output, fieldnames=fnames)
@@ -113,20 +114,21 @@ def generate_datasets(result_dir: str, languages_file: str, languages_dir: str, 
         file_index = 1 # start index
 
         for lang in languages_ext:
-            lang_path = os.path.join(languages_folder, lang)
+            lang_path = Path(languages_dir) / lang
 
-            if not lang_path.exists():
+            if not os.path.exists(lang_path):
                 continue
 
             chunk_index = 0
             
-            output_lang_dir = os.path.join(output_folder, lang)
+            output_lang_dir = Path(snippets_dir) / lang
             # create chunks recursive read all files and return list of chunks
 
-            if not os.path.exists(crawldir):
-                os.makedirs(crawldir)
+            if not os.path.exists(output_lang_dir):
+                os.makedirs(output_lang_dir)
 
             language_chunks = chunking(lang_path,languages_ext[lang],chunksize)
+            print(len(language_chunks))
 
             if not language_chunks:
                 continue
@@ -135,14 +137,12 @@ def generate_datasets(result_dir: str, languages_file: str, languages_dir: str, 
 
             for i,chunk in enumerate(language_chunks):
 
-                
-
                 try:
                     # writing and return file size
                     current_size =  write_with_size( f'"{base64.b64encode(chunk.encode("utf8"))}"', file_index, output_lang_dir)
                     
                     # add path csv
-                    writer.writerow({'snipet' : os.path.join(output_lang_dir, f"{file_index}.json"),
+                    writer.writerow({'snipet' : os.path.join("snippets", lang.capitalize(), f"{file_index}.json"),
                                      'index': chunk_index,
                                      'lang': lang})
                     
