@@ -38,7 +38,7 @@ def flatten_json(y):
     flatten(y)
     return out
 
-@click.command()
+@click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.option('--json-files-folder', '-p', default='.', help='folders with repo/commits.', show_default=True)
 @click.option('--output-csv', '-f', help='Output csv normilize file.')
 @click.option('--command', '-t', help='specify wich type of content need extract.')

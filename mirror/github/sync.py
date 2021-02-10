@@ -202,7 +202,7 @@ def sync(
     return synced
 
 
-@click.command()
+@click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.option('--setup', help='If set, creates the relevant tables in the given database')
 @click.option('--crawldir', '-d', help='Path to directory containing results of a GitHub crawl')
 @click.option('--batch-size', '-b', type=int, default=1000, help='Number of repositories to sync at a time (database transaction batching)')

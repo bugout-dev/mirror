@@ -95,7 +95,7 @@ def write_repos(data, alredy_parsed, date, files_counter, path, language, search
 
 
 
-@click.command()
+@click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.option('--crawldir', '-d', default='./', help='Path to save folder.', show_default=True)
 
 @click.option('--stars_expression', '-s', help='Stars amount. "500" or ">500" or "<500"')

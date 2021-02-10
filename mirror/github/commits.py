@@ -125,7 +125,7 @@ def get_repos_files(repos_dir, start_id, end_id):
         return dir_files
 
 
-@click.command()
+@click.command(context_settings=dict(help_option_names=['-h', '--help']))
 
 @click.option('--start-id', '-s', type=int, default=None, help='Start repo id for crawl command output.')
 

@@ -89,7 +89,8 @@ def crawl(start_id: int, max_id: int, interval: float, min_rate_limit: int) -> D
 
 
 @click.command(context_settings={
-    "ignore_unknown_options": True
+    "ignore_unknown_options": True,
+    "help_option_names": ['-h', '--help']
 })
 @click.option('--start-id', '-s', type=int, default=0, help='Last ID seen in GitHub all repos crawl; current crawl will start from its successor')
 
@@ -189,7 +190,7 @@ def nextid(crawldir: str) -> int:
     return result['data'][-1]['id']
 
 
-@click.command()
+@click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.option('--crawldir', '-d', help='Path to directory in which crawl results should be written')
 def nextid_handler(crawldir: str) -> None:
     """
@@ -237,7 +238,7 @@ def validate(result_range: List[Tuple[str, int]]) -> List[Tuple[int, int]]:
 
 
 
-@click.command()
+@click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.option( '--crawldir', '-d',  help='Path to directory in which crawl results should be written')
 @click.option('--num-processes', '-p', type=int, default=1, help='Number of processes to use when performing validation')
 @click.option('--outfile', '-o', help='Path to file into which validation output should be written')
@@ -305,7 +306,7 @@ def sample(crawl_batches: List[str], choose_probability: float) -> Iterator[Dict
             if random.random() < choose_probability:
                 yield repository
 
-@click.command()
+@click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.option('--crawldir', '-d', help='Path to directory in which crawl results should be written')
 @click.option('--outfile', '-o', type=click.File('w'), default=sys.stdout, help='Path to file to which samples should be written (default: stdout)')
 @click.option('--probability', '-p', type=float, help='Probability with which a repository in the crawl directory should be chosen')

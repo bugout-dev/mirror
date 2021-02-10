@@ -54,9 +54,9 @@ def get_license(repo_api_url: str) -> Dict[str, Any]:
     }
     return result
 
-
 @click.command(context_settings={
-    "ignore_unknown_options": True
+    "ignore_unknown_options": True,
+    "help_option_names": ['-h', '--help']
 })
 @click.option('--repos', '-r', help='File with JSON array of GitHub API URLs for repos (if value is "file:<filename>") '
             'OR comma-separated list of GitHub API URLs of repos')
