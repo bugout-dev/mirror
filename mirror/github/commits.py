@@ -5,6 +5,8 @@ import csv
 import sys
 import json
 import time
+import glob
+import tarfile
 import string
 import traceback
 from pathlib import Path
@@ -20,12 +22,17 @@ REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
 
 DATETIME_HEADER = 'Date'
 
-
 def get_nearest_value(iterable, value):
+    """
+    simple return nearest value inside given iterable object
+    """
     return min(iterable, key=lambda x: abs(int(x.split('.')[0]) - value))
 
 
 def read_repos(repos_dir, file_name, start_id, end_id):
+    """
+    Read repos from file. Filter repos by given repo id range if specified.
+    """
     repos_file_path = os.path.join(repos_dir, file_name)
     
     # load available repo
@@ -37,8 +44,20 @@ def read_repos(repos_dir, file_name, start_id, end_id):
                 return json.loads(repos_file.read())['data']
 
 
+def create_tar_file(files_dir, output_dir):
+    """
+    Crate tar from files inside commits folder
+    """
+    with tarfile.open(os.path.join(output_dir, 'commits.tar.gz'), 'w') as archive:
+        # for i in os.listdir(commits_folder):
+        #    archive.add(i, filter=lambda x: x if x.name.endswith('.json') else None)
+        archive.add(files_dir)
+
 
 def request_with_limit(repo, headers, min_rate_limit):
+    """
+    Request to github api do simple awaite if request limit close to cli specified limit
+    """
 
     while True:
 
@@ -110,7 +129,7 @@ def get_repos_files(repos_dir, start_id, end_id):
 
 @click.option('--start-id', '-s', type=int, default=None, help='Start repo id for crawl command output.')
 
-@click.option('--end-id', '-m', type=int, default=None, help='End repo id. You need to specify both parameters start and end id. ')
+@click.option('--end-id', '-e', type=int, default=None, help='End repo id. You need to specify both parameters start and end id. ')
 
 @click.option('--crawldir', '-d', default='.', help='Path to save folder. default="." ')
 
@@ -118,7 +137,7 @@ def get_repos_files(repos_dir, start_id, end_id):
 
 @click.option('--token', '-t', help='Access token for increase rate limit. Read from env $github_token if specify.', default=None)
 
-@click.option('--min-rate-limit', '-l', type=int, default=30, help='Minimum remaining rate limit on API under which the crawl is interrupted')
+@click.option('--min-rate-limit', '-l', type=int, default=10, help='Minimum remaining rate limit on API under which the crawl is interrupted')
 
 def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos_dir: str, token: Optional[str], min_rate_limit: int):
 
@@ -143,9 +162,8 @@ def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos
 
     files_for_proccessing = get_repos_files(repos_dir, start_id, end_id)
 
-    start_block = '{'+ f'"command": "commits", "data": ['
+    start_block = '{ "command": "commits", "data": {'
 
-    
     # 2 output idexing csv and commits
 
     csv_out = os.path.join(crawldir, 'id_indexes.csv')
@@ -163,7 +181,7 @@ def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos
         writer = csv.DictWriter(output, fieldnames=fnames)
         writer.writeheader()
 
-        for i,file_name in enumerate(bar):
+        for file_name in bar:
 
             repos = read_repos(repos_dir, file_name, start_id, end_id)
 
@@ -172,21 +190,20 @@ def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos
 
             write_with_size(start_block, file_index, commits_out)
     
-            for repo in repos:
+            for i,repo in enumerate(repos):
 
                 # Get commits
                 commits_responce = request_with_limit(repo, headers, min_rate_limit)
 
-                commits_data = commits_responce.json()
 
-                repo_dump = json.dumps({repo['id']:commits_data})
+                repo_dump = f'"{repo["id"]}" : {commits_responce.text}'
 
 
                 # date of creating that commits file
                 date = commits_responce.headers.get(DATETIME_HEADER)
 
                 # Indexing
-                writer.writerow({'file' : os.path.join(commits_out, f"{file_index}.json"),
+                writer.writerow({'file' : os.path.join("commits", f"{file_index}.json"),
                                  'repo_id': repo['id']})
                 
                 current_size = write_with_size(repo_dump, file_index, commits_out)
@@ -194,15 +211,15 @@ def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos
                 # Size regulation
                 if current_size >5000000:
                     
-                    write_with_size(f'], "crawled_at": "{date}"', file_index, commits_out)
+                    write_with_size(f'{"}"}, "crawled_at": "{date}" {"}"}', file_index, commits_out)
                     file_index += 1
                     write_with_size(start_block, file_index, commits_out)
+                elif i == len(repos):
+                    write_with_size(f'{"}"}, "crawled_at": "{date}" {"}"}', file_index, commits_out)
+                    file_index += 1
                 else:
-                    if i != len(repos) - 1:
-                        write_with_size(',', file_index, commits_out)
-
-            write_with_size(f'], "crawled_at": "{date}"', file_index, commits_out)
-            file_index += 1
+                     write_with_size(',', file_index, commits_out)
+    create_tar_file(crawldir, commits_out)
 
 
 if __name__ == "__main__":

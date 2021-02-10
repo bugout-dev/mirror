@@ -3,7 +3,9 @@ import os
 import sys
 import csv
 import json
+import glob
 import base64
+import tarfile
 import sqlite3
 import itertools
 from pathlib import Path
@@ -21,6 +23,15 @@ from .utils import write_with_size
 class ReadReposDirectoryError(Exception):
     """Raised when repos folder not set."""
     pass
+
+def create_tar_file(files_dir, output_dir):
+    """
+    Crate tar from files inside commits folder
+    """
+    with tarfile.open(os.path.join(output_dir, 'snippets.tar.gz'), 'w') as archive:
+        # for i in os.listdir(commits_folder):
+        #    archive.add(i, filter=lambda x: x if x.name.endswith('.json') else None)
+        archive.add(files_dir)
 
 def searching_all_files(directory, extention: str):
 
@@ -105,7 +116,7 @@ def generate_datasets(result_dir: str, languages_file: str, languages_dir: Optio
         os.makedirs(snippets_dir)
 
     # Create file with path to chunk
-    start_block = '{'+ f'data": ['
+    start_block = '{"data": ['
 
     end_block = ']}'
 
@@ -160,15 +171,17 @@ def generate_datasets(result_dir: str, languages_file: str, languages_dir: Optio
                         db_tool.write_snipet_to_db(conn, chunk, lang)
 
                     # create new file and restar chunk indexing
-                    if current_size > file_size_limit:
+                    if current_size > file_size_limit and i != len(language_chunks) :
                         write_with_size(end_block, file_index, output_lang_dir)
                         file_index += 1
                         chunk_index = 0
                         write_with_size(start_block, file_index, output_lang_dir)
+                    elif i == len(language_chunks):
+                        write_with_size(end_block, file_index, output_lang_dir)
+                        file_index += 1
+                        chunk_index = 0
                     else:
-                        # if it last lang chunk so close
-                        if i != len(language_chunks) - 1:
-                            write_with_size(',', file_index, output_lang_dir)
+                        write_with_size(',', file_index, output_lang_dir)
 
                     chunk_index += 1
                 
@@ -178,10 +191,14 @@ def generate_datasets(result_dir: str, languages_file: str, languages_dir: Optio
                 except Exception as err:
                     print(err)
                     continue
-
-    config = json.dumps({"mirror version" : settings.module_version,
+    
+    create_tar_file(snippets_dir, result_dir)
+    
+    with open(Path(result_dir) / f"meta.json", 'w') as meta_out:
+        json.dump({"mirror version" : settings.module_version,
                          "date": f"{datetime.now()}",
-                         "langs_config": languages_ext})
+                         "langs_config": languages_ext}, meta_out)
+
 
 
 
