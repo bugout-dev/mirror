@@ -6,21 +6,56 @@ import sys
 import json
 import time
 import glob
-import tarfile
+import zipfile
 import string
 import traceback
 from pathlib import Path
 from typing import Optional
 
+from .utils import flatten_json
+
 import requests
 import click
 
 from .utils import write_with_size
+from .data import CommitPublic
 
+
+class MaskStructureError(Exception):
+    """Raised when mask missmatch with input json."""
+    pass
 
 REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
 
 DATETIME_HEADER = 'Date'
+
+
+def validate(data, allowed_data):
+    """Take a data structure and apply pydentic model.
+    """
+    allowed_data.update(CommitPublic(**data).dict())
+
+
+def commits_parser(github_commits, repo_id, html_url):
+
+    """
+    Push commits via validator and add additional fileds.
+    return list of json string
+    """
+    commits = github_commits.json()
+
+    out = list()
+
+    for commit in commits:
+        
+        allowed_data = {"repo_id": repo_id, "repo_html_url": html_url}
+
+        if commit:
+            validate(flatten_json(commit), allowed_data)
+
+        out.append(json.dumps(allowed_data))
+
+    return commits[0]['sha'], out
 
 def get_nearest_value(iterable, value):
     """
@@ -44,14 +79,16 @@ def read_repos(repos_dir, file_name, start_id, end_id):
                 return json.loads(repos_file.read())['data']
 
 
-def create_tar_file(files_dir, output_dir):
+def create_zip_file(files_dir):
     """
-    Crate tar from files inside commits folder
+    Create zip inside snippets folder
     """
-    with tarfile.open(os.path.join(output_dir, 'commits.tar.gz'), 'w') as archive:
-        # for i in os.listdir(commits_folder):
-        #    archive.add(i, filter=lambda x: x if x.name.endswith('.json') else None)
-        archive.add(files_dir)
+    with zipfile.ZipFile(os.path.join(files_dir, '..','commits.zip'), 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, dirs, files in os.walk(files_dir):
+            for file in files:
+                zipf.write(os.path.join(root, file), os.path.relpath(os.path.join(root, file), os.path.join(files_dir, '..')))
+
+
 
 
 def request_with_limit(repo, headers, min_rate_limit):
@@ -106,7 +143,7 @@ def get_repos_files(repos_dir, start_id, end_id):
 
     if start_id and end_id and  result_command_type == "crawl":
 
-        nerest_start_id = get_nearest_value(start_id)
+        nerest_start_id = get_nearest_value(dir_files, start_id)
 
         if dir_files.index(f"{nerest_start_id}.json")-2 <= 0:
             start_index = 0
@@ -114,7 +151,7 @@ def get_repos_files(repos_dir, start_id, end_id):
             start_file = dir_files.index(f"{nerest_start_id}.json")-2
         
         
-        nerest_end_id = get_nearest_value(end_id)
+        nerest_end_id = get_nearest_value(dir_files, end_id)
 
         if dir_files.index(f"{nerest_end_id}.json")+2  >= len(dir_files):
             end_index = -1
@@ -135,11 +172,13 @@ def get_repos_files(repos_dir, start_id, end_id):
 
 @click.option('--repos-dir', '-r', help='Directory with repos files.')
 
+@click.option('--schema', '-S', help='Directory with repos files.')
+
 @click.option('--token', '-t', help='Access token for increase rate limit. Read from env $github_token if specify.', default=None)
 
 @click.option('--min-rate-limit', '-l', type=int, default=10, help='Minimum remaining rate limit on API under which the crawl is interrupted')
 
-def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos_dir: str, token: Optional[str], min_rate_limit: int):
+def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos_dir: str, schema: str, token: Optional[str], min_rate_limit: int):
 
     """
     Read repos json file and upload all commits for that repos one by one.
@@ -147,7 +186,6 @@ def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos
     
     if not os.path.exists(crawldir):
         os.makedirs(crawldir)
-
 
     if not token:
         if os.environ.get('github_token'):
@@ -162,13 +200,13 @@ def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos
 
     files_for_proccessing = get_repos_files(repos_dir, start_id, end_id)
 
-    start_block = '{ "command": "commits", "data": {'
+    start_block = '{ "command": "commits", "data": ['
 
     # 2 output idexing csv and commits
 
-    csv_out = os.path.join(crawldir, 'id_indexes.csv')
-
     commits_out = os.path.join(crawldir, "commits")
+
+    csv_out = os.path.join(commits_out, 'id_indexes.csv')
 
     if not os.path.exists(commits_out):
         os.makedirs(commits_out)
@@ -176,7 +214,7 @@ def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos
 
     with click.progressbar(files_for_proccessing) as bar, open(csv_out, mode='wt', encoding='utf8', newline='') as output:
 
-        fnames = ['file', 'repo_id']
+        fnames = ['file', 'commt_hash', 'license', 'repo_url']
 
         writer = csv.DictWriter(output, fieldnames=fnames)
         writer.writeheader()
@@ -195,8 +233,12 @@ def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos
                 # Get commits
                 commits_responce = request_with_limit(repo, headers, min_rate_limit)
 
+                sha, commits = commits_parser(commits_responce, repo["id"], repo["html_url"])
 
-                repo_dump = f'"{repo["id"]}" : {commits_responce.text}'
+                repo_dump = ",".join(commits)
+
+                if repo['license']:
+                   license =  repo['license']['spdx_id']
 
 
                 # date of creating that commits file
@@ -204,22 +246,24 @@ def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos
 
                 # Indexing
                 writer.writerow({'file' : os.path.join("commits", f"{file_index}.json"),
-                                 'repo_id': repo['id']})
+                                 "repo_url": repo["html_url"],
+                                 "commt_hash": sha,
+                                 "license": license})
                 
                 current_size = write_with_size(repo_dump, file_index, commits_out)
 
                 # Size regulation
                 if current_size >5000000:
                     
-                    write_with_size(f'{"}"}, "crawled_at": "{date}" {"}"}', file_index, commits_out)
+                    write_with_size(f'], "crawled_at": "{date}" {"}"}', file_index, commits_out)
                     file_index += 1
                     write_with_size(start_block, file_index, commits_out)
-                elif i == len(repos):
-                    write_with_size(f'{"}"}, "crawled_at": "{date}" {"}"}', file_index, commits_out)
+                elif i == len(repos)-1:
+                    write_with_size(f'], "crawled_at": "{date}" {"}"}', file_index, commits_out)
                     file_index += 1
                 else:
                      write_with_size(',', file_index, commits_out)
-    create_tar_file(crawldir, commits_out)
+    create_zip_file(commits_out)
 
 
 if __name__ == "__main__":

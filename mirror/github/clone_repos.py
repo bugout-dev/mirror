@@ -11,9 +11,10 @@ import click
 import pygit2 # type: ignore
 import requests
 
-from ..settings import GITHUB_TOKEN
+from ..settings import GITHUB_TOKEN, module_version
 
 REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
+DATETIME_HEADER = 'Date'
 
 class ConfigReadError(Exception):
     """Raised when the input value is too small"""
@@ -58,20 +59,6 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
     """
     Clone repos from search api to output dir.
     Be careful check of upload size not provide
-
-    output structure:
-    - crawldir
-      - language 1
-        - repo 1
-        - repo 2
-        ...
-      - language 2
-        - repo 1
-        - repo 2
-        ...
-      ...
-
-
     """
 
     if GITHUB_TOKEN is None:
@@ -95,10 +82,19 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
 
     with click.progressbar(languages) as bar:        
         for lang in bar:
-
+            
             try:
                     
                 query_search_expresion = encode_query(stars_expression, lang)
+
+                meta_data = {
+                    "language": lang,
+                    "query": query_search_expresion,
+                    "amount":amount,
+                    "repos": [],
+                    "crawled_at": None,
+                    "mirror version": module_version
+                }
 
                 request_url = f'https://api.github.com/search/repositories?q={query_search_expresion}&per_page={amount}&page=1'
 
@@ -124,12 +120,41 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
                         continue
 
                     pygit2.clone_repository(git_url, out_path)
+
+                    commits_response = request_with_limit(repo["commits_url"].replace('{/sha}',''), headers, 5).json()[0]
+
+                    meta_data["repos"].append({
+                        "name": repo["name"],
+                        "full_name": repo["full_name"],
+                        "github_repo_url": repo["html_url"],
+                        "commit_hash":commits_response["sha"],
+                        "license": repo["license"],
+                        "fork": repo["fork"],
+                        "description": repo["description"],
+                        "created_at": repo["created_at"],
+                        "updated_at": repo["updated_at"],
+                        "pushed_at": repo["pushed_at"],
+                        "stargazers_count": repo["stargazers_count"],
+                        "watchers_count": repo["stargazers_count"],
+                        "forks": repo["stargazers_count"],
+                        "open_issues": repo["open_issues"],
+                        "private": repo["private"],
+                        "owner": {
+                            "type": repo["owner"]["type"],
+                            "html_url": repo["owner"]["html_url"],
+                        }
+                        
+                    })
             
             except KeyboardInterrupt:
                 raise KeyboardInterrupt('CTRL+C')
                         
             except:
                 traceback.print_exc()
+
+            with open(os.path.join(crawldir, lang.capitalize(), "meta.json"), 'w') as meta_file:
+                meta_data["crawled_at"] = search_response.headers.get(DATETIME_HEADER)
+                json.dump(meta_data, meta_file)
 
         
 
