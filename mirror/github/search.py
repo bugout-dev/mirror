@@ -138,9 +138,7 @@ def popular_repos(languages: tuple, stars_expression: str, crawldir: str, token:
 
         try:
             with open(languages_file, 'r', encoding='utf8') as langs:
-                langs_conf = json.load(langs)
-
-            languages = langs_conf["languages"]
+                languages = json.load(langs)
 
         except Exception as err:
             print("Can't read langiages file. {err}")
