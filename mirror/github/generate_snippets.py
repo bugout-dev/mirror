@@ -95,14 +95,16 @@ def chunking(repo_path, ext: str, chunksize: int, lines_step: int, common_path):
 
 
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
-@click.option('--crawldir', '-d', default='.', help='Dir for data.', show_default=True)
-@click.option('--languages-file', '-f', help='Path to json file with languages for extracting.', required = True)
+@click.option('--crawldir', '-d', default='.', help='Snippets output filder.', show_default=True)
 @click.option('--languages-dir', '-L', help='Path to directory with languages repos.')
 @click.option('--chunksize', '-c', type=int, default=10, help='Size of code snipet.')
 @click.option('--rows-step', '-r', type=int, default=None, help='Distance between start rows.')
 @click.option('--sqlite-path', '-q', help='Sqlite for writing snippets.', default = None,  show_default=True)
-def generate_datasets(crawldir: str, languages_file: str, languages_dir: Optional[str], chunksize: int, sqlite_path: Optional[str], rows_step: Optional[int]):
+def generate_datasets(crawldir: str, languages_dir: Optional[str], chunksize: int, sqlite_path: Optional[str], rows_step: Optional[int]):
     
+    """
+    Create snippets dataset from cloned repos
+    """
 
     file_size_limit = 500000
 
@@ -121,14 +123,13 @@ def generate_datasets(crawldir: str, languages_file: str, languages_dir: Optiona
     
 
     # Read languages file
-    if languages_file:
-        try:
-            langs_file = Path(languages_file)
-            with langs_file.open('r', encoding='utf8') as langs:
-                languages_ext = json.load(langs)
-        except Exception as err:
-            print(f"Can't read languages file. Err: {err}")
-            raise
+    try:
+        langs_file = Path(languages_dir) / "languages_config.json"
+        with langs_file.open('r', encoding='utf8') as langs:
+            languages_ext = json.load(langs)
+    except Exception as err:
+        print(f"Can't read languages file. Err: {err}")
+        raise
     
     
 
@@ -182,7 +183,7 @@ def generate_datasets(crawldir: str, languages_file: str, languages_dir: Optiona
                                         chunksize,
                                         rows_step,
                                         languages_dir)
-                print(f"Crated {len(language_chunks)} {lang} chanks.")
+                print(f"Created {len(language_chunks)} {lang} chanks.")
 
                 if not language_chunks:
                     continue
@@ -203,7 +204,7 @@ def generate_datasets(crawldir: str, languages_file: str, languages_dir: Optiona
                         writer.writerow({'github_repo_url': repo["github_repo_url"],
                                         'commit_hash': repo['commit_hash'],
                                         'license': license,
-                                        'file' : os.path.join("snippets", f"{file_index}.json"),
+                                        'file' : os.path.join( f"{file_index}.json"),
                                         'index': chunk_index,
                                         'language': lang.lower(),
                                         "repo_file_name": chunk_data["file_name"],

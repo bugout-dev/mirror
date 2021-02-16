@@ -188,8 +188,8 @@ def commits(start_id: Optional[int], end_id: Optional[int], crawldir: str, repos
         os.makedirs(crawldir)
 
     if not token:
-        if os.environ.get('github_token'):
-            token = os.environ.get('github_token')
+        if os.environ.get('GITHUB_TOKEN'):
+            token = os.environ.get('GITHUB_TOKEN')
         else:
             click.echo(f'start with low rate limit')
     

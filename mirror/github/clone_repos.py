@@ -46,13 +46,13 @@ def encode_query(stars_expression, language):
 
 
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
-@click.option('--crawldir', '-d', default='.', help='Dir for cloned repos.', show_default=True)
+@click.option('--crawldir', '-d', default=None, help='Dir for cloned repos.', show_default=True)
 @click.option('--stars-expression', '-s', default='>500', help='Stars search condition. ">200" / "=400" / "<300" as example.', show_default=True)
 @click.option('--languages', '-L', nargs=0, help="Specify languages for extraction. Mirror ignoring that parametr if languages file is specified.")
 @click.argument('languages', nargs=-1)
 @click.option('--token', '-t', help='Access token for increase rate limit. Read from $GITHUB_TOKEN if specify.', default='', show_default=True)
-@click.option('--amount', '-n', help='Amount of repo.', type=int, default=50, show_default=True)
-@click.option('--languages-file', '-f', help='Path to json file with languages for extracting.')
+@click.option('--amount', '-n', help='Amount of repo per language.', type=int, default=50, show_default=True)
+@click.option('--languages-file', '-f', help='Path to json file with languages for extracting. If not specified read from enviroment.')
 
 
 def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: str, amount: int, languages_file: str):
@@ -60,27 +60,29 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
     Clone repos from search api to output dir.
     Be careful check of upload size not provide
     """
+    if not token:
+        GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
+    else:
+        GITHUB_TOKEN = token
 
-    if GITHUB_TOKEN is None:
-        click.echo(f'start with low rate limit')
-    
-    headers = {'accept': 'application/vnd.github.v3+json',
-                'Authorization': f'token {GITHUB_TOKEN}'}
 
     if not os.path.exists(crawldir):
         os.makedirs(crawldir)
-
+    
     if languages_file:
+        # read languages file
         try:
-
             with open(languages_file, 'r', encoding='utf8') as langs:
                 langs_conf = json.load(langs)
             
             languages = langs_conf.keys()
         except Exception as err:
             raise ConfigReadError(f"Can't read langiages file. {err}")
+    
+    headers = {'accept': 'application/vnd.github.v3+json',
+            'Authorization': f'token {GITHUB_TOKEN}'}
 
-    with click.progressbar(languages) as bar:        
+    with click.progressbar(languages, label='Download repos') as bar:        
         for lang in bar:
             
             try:
@@ -111,7 +113,7 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
                     if GITHUB_TOKEN:
                         git_url = "".join(("https://",GITHUB_TOKEN,'@',git_url.split('//')[1]))
 
-                    print(f"Repository name: {repo['name']}")
+                    #print(f"Repository name: {repo['name']}")
                     out_path = os.path.join(crawldir, lang.capitalize(), repo["name"])
 
                     if not os.path.exists(out_path):
@@ -155,6 +157,8 @@ def clone_repos(crawldir: str, stars_expression: str, languages: Tuple, token: s
             with open(os.path.join(crawldir, lang.capitalize(), "meta.json"), 'w') as meta_file:
                 meta_data["crawled_at"] = search_response.headers.get(DATETIME_HEADER)
                 json.dump(meta_data, meta_file)
+    with open(os.path.join(crawldir, "languages_config.json"), 'w') as save_config:
+        json.dump(langs_conf, save_config)
 
         
 
