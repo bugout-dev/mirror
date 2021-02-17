@@ -236,16 +236,12 @@ def clone_repos(
 
                     git_url = repo["git_url"]
 
-                    # if GITHUB_TOKEN:
-                    #     git_url = "".join(("https://",GITHUB_TOKEN,'@',git_url.split('//')[1]))
-
                     clone_repository(git_url, lang_path)
 
-                    # commits_response = request_with_limit(repo["commits_url"].replace('{/sha}',''), headers, 5).json()[0]
                     commit_hash = subprocess.run(
                         ["git", "rev-parse", "HEAD"],
                         stdout=subprocess.PIPE,
-                        swd=os.path.join(lang_path, repo["name"]),
+                        cwd=os.path.join(lang_path, repo["name"]),
                     ).stdout
 
                     with open(meta_file, "r+") as meta:
