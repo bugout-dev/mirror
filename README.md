@@ -6,11 +6,13 @@
 - Copy `sample.env` to `dev.env`, fill it with required variables and source it
 ```bash
 export GITHUB_TOKEN="<your GitHub token>"
-export LANGUAGES_DIR="<prepared directory with languages>"
+export LANGUAGES_DIR="<directory with cloned languages repos>"
 export MIRROR_CRAWL_INTERVAL_SECONDS=1
-export MIRROR_CRAWL_MIN_RATE_LIMIT=500
+export MIRROR_CRAWL_MIN_RATE_LIMIT=500 (for search better set as 5)
 export MIRROR_CRAWL_BATCH_SIZE="<how often save data>"
 export MIRROR_CRAWL_DIR="<where to save crawled data>"
+export MIRROR_LANGUAGES_FILE="<json file with languauges>"
+export SNIPPETS_DIR="<dir for snippets dataset>"
 ```
 
 - To avoid block from GitHub prepare Rate Limit watcher
@@ -23,13 +25,19 @@ watch -d -n 5 'curl https://api.github.com/rate_limit -s -H "Authorization: Bear
 ```
 python -m mirror.cli --help
 
-clone     Clone repos from search api to output dir.
-commits   Read repos json file and upload all commits for that repos one.
-crawl     Processes arguments as parsed from the command line and uses.
-nextid    Prints ID of most recent repository crawled and written to the.
-sample    Writes repositories sampled from a crawl directory to an output.
-search    Crawl via search api.
-validate  Prints ID of most recent repository crawled and written to the.
+  clone              Clone repos from search api to output dir.
+  commits            Read repos json file and upload all commits for that...
+  crawl              Processes arguments as parsed from the command line
+                     and...
+
+  generate_snippets  Create snippets dataset from cloned repos
+  nextid             Prints ID of most recent repository crawled and
+                     written...
+
+  sample             Writes repositories sampled from a crawl directory to...
+  search             Crawl via search api.
+  validate           Prints ID of most recent repository crawled and
+                     written...
 ```
 
 ### Extract all repos metadata
@@ -56,8 +64,14 @@ python -m mirror.cli search --crawldir "$MIRROR_CRAWL_DIR/search" -L "python" -s
 
 The `clone` command uses the standard `git clone` to extract search results of repositories and clones to local machine.
 
+Clone from search
 ```bash
-python -m mirror.cli clone --crawldir "$LANGUAGES_DIR" -s ">500" -L "python"
+python -m mirror.cli clone -d $LANGUAGES_DIR -r "$MIRROR_CRAWL_DIR/search"
+```
+
+Clone from crawl
+```bash
+python -m mirror.cli clone -d $LANGUAGES_DIR -r "$MIRROR_CRAWL_DIR"
 ```
 
 Structure of `$LANGUAGES_DIR` directory:
@@ -99,3 +113,31 @@ python -m mirror.github.utils --json-files-folder "$MIRROR_CRAWL_DIR" --output-c
 python -m mirror.github.generate_snippets -r "$OUTPUT_DIR" -f "examples/languages.json" -L "$LANGUAGES_DIR"
 
 ```
+
+
+
+
+### Workflow of generate snippet dataset from prepered file with languages and they extentions
+
+1) Create search result
+```bash
+python -m mirror.cli search -d "$MIRROR_CRAWL_DIR/search" -f $MIRROR_LANGUAGES_FILE -s ">500" -l 5
+```
+
+2) Clone repos from search result it's take time and maybe good idea not add stdout from **git clone** to terminal.
+```bash
+python -m mirror.cli clone -d $LANGUAGES_DIR -r "$MIRROR_CRAWL_DIR/search"
+```
+
+3) Generate snippets 
+```bash
+python -m mirror.cli generate_snippets  -d $SNIPPETS_DIR -r $LANGUAGES_DIR
+```
+
+It return sqlite db with snippets and they metadata.
+
+For use accross **allrepos** result **clone** and **commits** have option argument
+```bash
+ --start-id --end-id
+ ```
+ parameters must be set togrther. That id add for ability processing part of repo from allrepos result.
