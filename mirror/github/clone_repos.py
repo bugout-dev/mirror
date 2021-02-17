@@ -9,7 +9,6 @@ from pathlib import Path
 
 
 import click
-import pygit2 # type: ignore
 import requests
 
 from ..settings import GITHUB_TOKEN, module_version
@@ -27,13 +26,13 @@ def request_with_limit(url, headers, min_rate_limit):
     while True:
 
         response = requests.get(url, headers=headers)
-    
+
         rate_limit_raw = response.headers.get(REMAINING_RATELIMIT_HEADER)
 
         if rate_limit_raw is not None:
             current_rate_limit = int(rate_limit_raw)
             if current_rate_limit <= min_rate_limit:
-                
+
                 print('Rate limit is end. Awaiting 1 minute.')
                 time.sleep(60)
             else:
@@ -70,7 +69,7 @@ def create_dir_meta_if_not_exists(lang_path: str, meta_file: str, lang: str):
     if not os.path.exists(lang_path):
         os.makedirs(lang_path)
 
-    
+
     if not os.path.exists(meta_file):
         with open(meta_file, 'w') as meta:
             json.dump( {
@@ -86,7 +85,7 @@ def read_repos(repos_dir, file_name, start_id, end_id):
     Read repos from file. Filter repos by given repo id range if specified.
     """
     repos_file_path = os.path.join(repos_dir, file_name)
-    
+
     # load available repo
     if os.path.isfile(repos_file_path):
         with open(repos_file_path, 'r') as repos_file:
@@ -102,7 +101,7 @@ def get_repos_files(repos_dir, start_id, end_id):
     Return list of files with repose by given ids range or all files from folder if ids range not set
 
     In order to make sure that all repositories are covered,
-    add 2 additional files from the beginning of the ordered directory list and from the end 
+    add 2 additional files from the beginning of the ordered directory list and from the end
 
     """
 
@@ -121,15 +120,15 @@ def get_repos_files(repos_dir, start_id, end_id):
             start_index = 0
         else:
             start_file = dir_files.index(f"{nerest_start_id}.json")-2
-        
-        
+
+
         nerest_end_id = get_nearest_value(dir_files, end_id)
 
         if dir_files.index(f"{nerest_end_id}.json")+2  >= len(dir_files):
             end_index = -1
         else:
             end_index = dir_files.index(f"{nerest_end_id}.json")+2
-    
+
     else:
         return dir_files
 
@@ -166,23 +165,23 @@ def clone_repos(start_id: Optional[int], end_id: Optional[int], crawldir: str, r
 
     if not os.path.exists(crawldir):
         os.makedirs(crawldir)
-    
+
     headers = {'accept': 'application/vnd.github.v3+json',
             'Authorization': f'token {GITHUB_TOKEN}'}
 
     # read metadata
     files_for_proccessing = get_repos_files(repos_dir, start_id, end_id)
 
-    with click.progressbar(files_for_proccessing, label='Download repos') as bar:        
+    with click.progressbar(files_for_proccessing, label='Download repos') as bar:
         for repos_file in bar:
 
             repos = read_repos(repos_dir, repos_file, start_id, end_id)
 
             if not repos:
                 continue
-            
+
             for repo in repos:
-                try:   
+                try:
                     lang = get_lang(repo)
 
                     lang_path = os.path.join(crawldir, lang)
@@ -203,7 +202,7 @@ def clone_repos(start_id: Optional[int], end_id: Optional[int], crawldir: str, r
 
                     #commits_response = request_with_limit(repo["commits_url"].replace('{/sha}',''), headers, 5).json()[0]
                     commit_hash = subprocess.run(['git', 'rev-parse','HEAD'], stdout=subprocess.PIPE, swd=os.path.join(lang_path,repo['name'])).stdout
-                    
+
 
                     with open(meta_file, 'r+') as meta:
                         meta_data = json.load(meta)
@@ -228,12 +227,12 @@ def clone_repos(start_id: Optional[int], end_id: Optional[int], crawldir: str, r
                                 "type": repo["owner"]["type"],
                                 "html_url": repo["owner"]["html_url"],
                             }
-                            
+
                         })
-            
+
                 except KeyboardInterrupt:
                     raise KeyboardInterrupt('CTRL+C')
-                            
+
                 except:
                     traceback.print_exc()
 
@@ -243,7 +242,7 @@ def clone_repos(start_id: Optional[int], end_id: Optional[int], crawldir: str, r
     # with open(os.path.join(crawldir, "languages_config.json"), 'w') as save_config:
     #     json.dump(langs_conf, save_config)
 
-        
+
 
 
 
