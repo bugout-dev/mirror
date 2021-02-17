@@ -16,12 +16,14 @@ from ..settings import GITHUB_TOKEN
 from .utils import forward_languages_config
 
 
-REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
+REMAINING_RATELIMIT_HEADER = "X-RateLimit-Remaining"
 
-DATETIME_HEADER = 'Date'
+DATETIME_HEADER = "Date"
+
 
 class Error(Exception):
     """Base class for exceptions in this module."""
+
     pass
 
 
@@ -30,14 +32,14 @@ def request_with_limit(url, headers, min_rate_limit):
     while True:
 
         response = requests.get(url, headers=headers)
-    
+
         rate_limit_raw = response.headers.get(REMAINING_RATELIMIT_HEADER)
 
         if rate_limit_raw is not None:
             current_rate_limit = int(rate_limit_raw)
             if current_rate_limit <= min_rate_limit:
-                
-                print('Rate limit is end. Awaiting 1 minute.')
+
+                print("Rate limit is end. Awaiting 1 minute.")
                 time.sleep(60)
             else:
                 break
@@ -47,42 +49,41 @@ def request_with_limit(url, headers, min_rate_limit):
 def encode_query(stars_expression, language):
     stars_encoding = str(urllib.parse.unquote_plus(f"stars:{stars_expression}"))
     lang_encoding = str(urllib.parse.unquote_plus(f"language:{language.capitalize()}"))
-    return f'{stars_encoding}+{lang_encoding}'
+    return f"{stars_encoding}+{lang_encoding}"
 
 
 def get_total_count(search_query, headers, min_rate_limit):
-        
-        search_url = f'https://api.github.com/search/repositories?q={search_query}&per_page=100'
 
-        search_response = request_with_limit(search_url, headers, min_rate_limit)
+    search_url = (
+        f"https://api.github.com/search/repositories?q={search_query}&per_page=100"
+    )
 
-        click.echo(f' initial request done {search_url}')
+    search_response = request_with_limit(search_url, headers, min_rate_limit)
 
-        data = json.loads(search_response.text)
+    click.echo(f" initial request done {search_url}")
 
-        # result pagination
-        return data.get('total_count')
+    data = json.loads(search_response.text)
+
+    # result pagination
+    return data.get("total_count")
 
 
 def write_repos(data, alredy_parsed, date, files_counter, path, language, search_query):
 
-    json_data = { 
-        'data':[]
-    }
+    json_data = {"data": []}
 
-    repos = data['items']
-
+    repos = data["items"]
 
     for repo in repos:
 
-        if repo['id'] not in alredy_parsed:
+        if repo["id"] not in alredy_parsed:
 
-            json_data['data'].append(repo)
+            json_data["data"].append(repo)
         else:
             continue
 
-        alredy_parsed.add(repo['id'])
-    
+        alredy_parsed.add(repo["id"])
+
     json_data["command"] = "search"
 
     json_data["crawled_at"] = date
@@ -90,28 +91,50 @@ def write_repos(data, alredy_parsed, date, files_counter, path, language, search
     json_data["search_query"] = search_query
 
     file_path = os.path.join(path, f"{files_counter}.json")
-    
-    with open(file_path, 'w+', newline='') as output_file:
+
+    with open(file_path, "w+", newline="") as output_file:
         json.dump(json_data, output_file)
 
 
-
-@click.command(context_settings=dict(help_option_names=['-h', '--help']))
-@click.option('--crawldir', '-d', default='./', help='Path to save folder.', show_default=True)
-
-@click.option('--stars_expression', '-s', help='Stars amount. "500" or ">500" or "<500"')
-
-@click.option('--token', '-t', help='Access token for increase rate limit. Read from env $GITHUB_TOKEN if specify.', default=None, show_default=True)
-
-@click.option('--languages', '-L', nargs=0, help="Specify languages for extraction. Mirror ignoring that parametr if languages file is specified.")
-
-@click.argument('languages', nargs=-1)
-
-@click.option('--min-rate-limit', '-l', type=int, default=10, help='Minimum remaining rate limit on API under which the crawl is interrupted')
-
-@click.option('--languages-file', '-f', help='Path to json file with languages for extracting.')
-
-def popular_repos(languages: tuple, stars_expression: str, crawldir: str, token: Optional[str], min_rate_limit: int, languages_file: str):
+@click.command(context_settings=dict(help_option_names=["-h", "--help"]))
+@click.option(
+    "--crawldir", "-d", default="./", help="Path to save folder.", show_default=True
+)
+@click.option(
+    "--stars_expression", "-s", help='Stars amount. "500" or ">500" or "<500"'
+)
+@click.option(
+    "--token",
+    "-t",
+    help="Access token for increase rate limit. Read from env $GITHUB_TOKEN if specify.",
+    default=None,
+    show_default=True,
+)
+@click.option(
+    "--languages",
+    "-L",
+    nargs=0,
+    help="Specify languages for extraction. Mirror ignoring that parametr if languages file is specified.",
+)
+@click.argument("languages", nargs=-1)
+@click.option(
+    "--min-rate-limit",
+    "-l",
+    type=int,
+    default=10,
+    help="Minimum remaining rate limit on API under which the crawl is interrupted",
+)
+@click.option(
+    "--languages-file", "-f", help="Path to json file with languages for extracting."
+)
+def popular_repos(
+    languages: tuple,
+    stars_expression: str,
+    crawldir: str,
+    token: Optional[str],
+    min_rate_limit: int,
+    languages_file: str,
+):
 
     """
     Crawl via search api.
@@ -128,19 +151,20 @@ def popular_repos(languages: tuple, stars_expression: str, crawldir: str, token:
     """
     files_counter = 0
 
-    headers = {'accept': 'application/vnd.github.v3+json',
-               'Authorization': f'token {GITHUB_TOKEN}'}
+    headers = {
+        "accept": "application/vnd.github.v3+json",
+        "Authorization": f"token {GITHUB_TOKEN}",
+    }
 
     if not os.path.exists(crawldir):
         os.makedirs(crawldir)
 
-
     if GITHUB_TOKEN is None:
-        click.echo(f'start with low rate limit')
-    
+        click.echo(f"start with low rate limit")
+
     if languages_file:
         try:
-            with open(languages_file, 'r', encoding='utf8') as langs:
+            with open(languages_file, "r", encoding="utf8") as langs:
                 languages = json.load(langs)
 
             forward_languages_config(languages_file, crawldir)
@@ -148,7 +172,6 @@ def popular_repos(languages: tuple, stars_expression: str, crawldir: str, token:
         except Exception as err:
             traceback.print_exc()
             print(f"Can't read langiages file. {err}")
-
 
     for language in languages:
 
@@ -163,16 +186,14 @@ def popular_repos(languages: tuple, stars_expression: str, crawldir: str, token:
         alredy_parsed: set = set()
 
         # etract total count github limit is 10 page of search result
-        page_amount = total_count//100
+        page_amount = total_count // 100
 
         if total_count % 100 and total_count < 1000:
-            page_amount +=1
-
+            page_amount += 1
 
         if not os.path.exists(crawldir):
             os.makedirs(crawldir)
 
-        
         for letter in list(string.ascii_lowercase):
 
             page = 1
@@ -182,48 +203,46 @@ def popular_repos(languages: tuple, stars_expression: str, crawldir: str, token:
                 # limitation of search result
                 while len(alredy_parsed) <= total_count and page <= 10:
 
-
-                    
                     if total_count > 1000:
-                        search_expresion = letter+'+' + init_search_query
+                        search_expresion = letter + "+" + init_search_query
                     else:
                         search_expresion = init_search_query
-                    
 
                     # parsing block
 
-                    search_url = f'https://api.github.com/search/repositories?q={search_expresion}&per_page=100&page={page}'
+                    search_url = f"https://api.github.com/search/repositories?q={search_expresion}&per_page=100&page={page}"
 
-                    search_response = request_with_limit(search_url, headers, min_rate_limit)
+                    search_response = request_with_limit(
+                        search_url, headers, min_rate_limit
+                    )
 
                     data = json.loads(search_response.text)
 
-
-                    if not data.get('items'):
+                    if not data.get("items"):
                         break
 
                     files_counter += 1
 
-                    write_repos(data,
-                                  alredy_parsed,
-                                  search_response.headers.get(DATETIME_HEADER),
-                                  files_counter,
-                                  crawldir,
-                                  language,
-                                  search_url)
- 
+                    write_repos(
+                        data,
+                        alredy_parsed,
+                        search_response.headers.get(DATETIME_HEADER),
+                        files_counter,
+                        crawldir,
+                        language,
+                        search_url,
+                    )
+
                     page += 1
             except KeyboardInterrupt:
-                raise KeyboardInterrupt('CTRL+C')
+                raise KeyboardInterrupt("CTRL+C")
             except:
                 traceback.print_exc()
                 raise
-            
-            if total_count<=1000:
-                break
-            
-        
 
-        
+            if total_count <= 1000:
+                break
+
+
 if __name__ == "__main__":
     popular_repos()

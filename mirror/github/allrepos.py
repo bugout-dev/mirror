@@ -18,16 +18,19 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, TextIO, Tuple
 import click
 
 import requests
-from tqdm import tqdm # type: ignore
+from tqdm import tqdm  # type: ignore
 
 from ..populate import populate_cli
 
-subcommand = 'allrepos'
+subcommand = "allrepos"
 
-REPOSITORIES_URL = 'https://api.github.com/repositories'
-REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
+REPOSITORIES_URL = "https://api.github.com/repositories"
+REMAINING_RATELIMIT_HEADER = "X-RateLimit-Remaining"
 
-def crawl(start_id: int, max_id: int, interval: float, min_rate_limit: int) -> Dict[str, Any]:
+
+def crawl(
+    start_id: int, max_id: int, interval: float, min_rate_limit: int
+) -> Dict[str, Any]:
     """
     Crawls the /repositories endpoint of the GitHub API until it hits a page on which the maximum ID
     is greater than or equal to the given max_id parameter, at which point, it returns the results
@@ -46,31 +49,31 @@ def crawl(start_id: int, max_id: int, interval: float, min_rate_limit: int) -> D
         and return right away.
     """
     result = {
-        'start_id': start_id,
-        'max_id': max_id,
-        'data': [],
-        'start': int(time.time()),
+        "start_id": start_id,
+        "max_id": max_id,
+        "data": [],
+        "start": int(time.time()),
     }
 
     headers = {
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'simiotics mirror',
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "simiotics mirror",
     }
-    github_token = os.environ.get('GITHUB_TOKEN')
-    if github_token is not None and github_token != '':
-        headers['Authorization'] = f'token {github_token}'
+    github_token = os.environ.get("GITHUB_TOKEN")
+    if github_token is not None and github_token != "":
+        headers["Authorization"] = f"token {github_token}"
 
     since = start_id
     curr_rate_limit = min_rate_limit + 10
     while since is not None and since < max_id and curr_rate_limit > min_rate_limit:
         time.sleep(interval)
-        r = requests.get(REPOSITORIES_URL, params={'since': since}, headers=headers)
+        r = requests.get(REPOSITORIES_URL, params={"since": since}, headers=headers)
         response_body = r.json()
         if not response_body:
             break
 
-        result['data'].extend(response_body) # type: ignore
-        since = response_body[-1].get('id')
+        result["data"].extend(response_body)  # type: ignore
+        since = response_body[-1].get("id")
 
         curr_rate_limit_raw = r.headers.get(REMAINING_RATELIMIT_HEADER)
         try:
@@ -80,31 +83,68 @@ def crawl(start_id: int, max_id: int, interval: float, min_rate_limit: int) -> D
         except:
             break
 
-    result['max_id'] = since
-    result['end'] = int(time.time())
-    result['command'] = "crawl"
-    result['ending_rate_limit'] = curr_rate_limit
+    result["max_id"] = since
+    result["end"] = int(time.time())
+    result["command"] = "crawl"
+    result["ending_rate_limit"] = curr_rate_limit
 
     return result
 
 
-@click.command(context_settings={
-    "ignore_unknown_options": True,
-    "help_option_names": ['-h', '--help']
-})
-@click.option('--start-id', '-s', type=int, default=0, help='Last ID seen in GitHub all repos crawl; current crawl will start from its successor')
-
-@click.option('--max-id', '-m', type=int, default=100000000, help='Crawl should extend to this idea (and no more than one page further)')
-
-@click.option('--interval',  '-t', type=float, default=1.0, help='Number of seconds to wait between page retrievals from /repositories endpoint')
-
-@click.option('--min-rate-limit', '-l', type=int, default=30, help='Minimum remaining rate limit on API under which the crawl is interrupted')
-
-@click.option('--batch-size', '-n', type=int, default=3000, help='Number of pages  should (roughly) be processed before writing results to disk')
-
-@click.option('--crawldir', '-d', help='Path to directory in which crawl results should be written')
-
-def crawl_handler(start_id: int, max_id: int, interval: float, min_rate_limit: int, batch_size: int, crawldir: str) -> None:
+@click.command(
+    context_settings={
+        "ignore_unknown_options": True,
+        "help_option_names": ["-h", "--help"],
+    }
+)
+@click.option(
+    "--start-id",
+    "-s",
+    type=int,
+    default=0,
+    help="Last ID seen in GitHub all repos crawl; current crawl will start from its successor",
+)
+@click.option(
+    "--max-id",
+    "-m",
+    type=int,
+    default=100000000,
+    help="Crawl should extend to this idea (and no more than one page further)",
+)
+@click.option(
+    "--interval",
+    "-t",
+    type=float,
+    default=1.0,
+    help="Number of seconds to wait between page retrievals from /repositories endpoint",
+)
+@click.option(
+    "--min-rate-limit",
+    "-l",
+    type=int,
+    default=30,
+    help="Minimum remaining rate limit on API under which the crawl is interrupted",
+)
+@click.option(
+    "--batch-size",
+    "-n",
+    type=int,
+    default=3000,
+    help="Number of pages  should (roughly) be processed before writing results to disk",
+)
+@click.option(
+    "--crawldir",
+    "-d",
+    help="Path to directory in which crawl results should be written",
+)
+def crawl_handler(
+    start_id: int,
+    max_id: int,
+    interval: float,
+    min_rate_limit: int,
+    batch_size: int,
+    crawldir: str,
+) -> None:
     """
     Processes arguments as parsed from the command line and uses them to run a crawl of the GitHub
     /repositories endpoint.
@@ -127,16 +167,17 @@ def crawl_handler(start_id: int, max_id: int, interval: float, min_rate_limit: i
             interval,
             min_rate_limit,
         )
-        outfile = os.path.join(crawldir, f'{current_max}.json')
-        with open(outfile, 'w') as ofp:
+        outfile = os.path.join(crawldir, f"{current_max}.json")
+        with open(outfile, "w") as ofp:
             json.dump(result, ofp)
 
-        if len(result['data']) == 0:
+        if len(result["data"]) == 0:
             break
-        current_max = result['data'][-1]['id']
+        current_max = result["data"][-1]["id"]
 
-        if result['ending_rate_limit'] < min_rate_limit:
+        if result["ending_rate_limit"] < min_rate_limit:
             break
+
 
 def ordered_crawl(crawldir: str) -> List[Tuple[str, int]]:
     """
@@ -150,14 +191,11 @@ def ordered_crawl(crawldir: str) -> List[Tuple[str, int]]:
     step they represent. Returns the start_id of each result file as the second coordinate of each
     tuple in the return list.
     """
-    result_files = glob.glob(os.path.join(crawldir, '*.json'))
+    result_files = glob.glob(os.path.join(crawldir, "*.json"))
     if not result_files:
         return []
     indexed_result_files = [
-        (
-            rfile,
-            int(os.path.basename(rfile).split('.')[0])
-        ) for rfile in result_files
+        (rfile, int(os.path.basename(rfile).split(".")[0])) for rfile in result_files
     ]
     return sorted(indexed_result_files, key=lambda p: p[1])
 
@@ -173,25 +211,26 @@ def nextid(crawldir: str) -> int:
 
     Returns: Maximum ID over all repositories seen in the crawl
     """
-    result_files = glob.glob(os.path.join(crawldir, '*.json'))
+    result_files = glob.glob(os.path.join(crawldir, "*.json"))
     if not result_files:
         return 0
     indexed_result_files = [
-        (
-            rfile,
-            int(os.path.basename(rfile).split('.')[0])
-        ) for rfile in result_files
+        (rfile, int(os.path.basename(rfile).split(".")[0])) for rfile in result_files
     ]
     last_file, index = max(indexed_result_files, key=lambda p: p[1])
-    with open(last_file, 'r') as ifp:
+    with open(last_file, "r") as ifp:
         result = json.load(ifp)
-    if len(result['data']) == 0:
+    if len(result["data"]) == 0:
         return index
-    return result['data'][-1]['id']
+    return result["data"][-1]["id"]
 
 
-@click.command(context_settings=dict(help_option_names=['-h', '--help']))
-@click.option('--crawldir', '-d', help='Path to directory in which crawl results should be written')
+@click.command(context_settings=dict(help_option_names=["-h", "--help"]))
+@click.option(
+    "--crawldir",
+    "-d",
+    help="Path to directory in which crawl results should be written",
+)
 def nextid_handler(crawldir: str) -> None:
     """
     Prints ID of most recent repository crawled and written to the crawldir parsed into the given
@@ -204,6 +243,7 @@ def nextid_handler(crawldir: str) -> None:
     Returns: None. Prints most recent repository ID to screen.
     """
     print(nextid(crawldir))
+
 
 def validate(result_range: List[Tuple[str, int]]) -> List[Tuple[int, int]]:
     """
@@ -223,25 +263,37 @@ def validate(result_range: List[Tuple[str, int]]) -> List[Tuple[int, int]]:
 
     for i, pair in enumerate(result_range[:-1]):
         result_file, this_id = pair
-        with open(result_file, 'r') as ifp:
+        with open(result_file, "r") as ifp:
             result = json.load(ifp)
-        _, next_id = result_range[i+1]
-        if not result.get('data'):
+        _, next_id = result_range[i + 1]
+        if not result.get("data"):
             missing_ranges.append((this_id, next_id))
             continue
-        max_id = result['data'][-1].get('id', -1)
+        max_id = result["data"][-1].get("id", -1)
         if max_id != next_id:
             missing_ranges.append((max_id, next_id))
 
     return missing_ranges
 
 
-
-
-@click.command(context_settings=dict(help_option_names=['-h', '--help']))
-@click.option( '--crawldir', '-d',  help='Path to directory in which crawl results should be written')
-@click.option('--num-processes', '-p', type=int, default=1, help='Number of processes to use when performing validation')
-@click.option('--outfile', '-o', help='Path to file into which validation output should be written')
+@click.command(context_settings=dict(help_option_names=["-h", "--help"]))
+@click.option(
+    "--crawldir",
+    "-d",
+    help="Path to directory in which crawl results should be written",
+)
+@click.option(
+    "--num-processes",
+    "-p",
+    type=int,
+    default=1,
+    help="Number of processes to use when performing validation",
+)
+@click.option(
+    "--outfile",
+    "-o",
+    help="Path to file into which validation output should be written",
+)
 def validate_handler(crawldir: str, num_processes: int, outfile: str) -> None:
     """
     Prints ID of most recent repository crawled and written to the crawldir parsed into the given
@@ -255,7 +307,7 @@ def validate_handler(crawldir: str, num_processes: int, outfile: str) -> None:
     """
     ofp = sys.stdout
     if outfile is not None:
-        ofp = open(outfile, 'w')
+        ofp = open(outfile, "w")
     invalid = []
 
     result_files = ordered_crawl(crawldir)
@@ -264,16 +316,23 @@ def validate_handler(crawldir: str, num_processes: int, outfile: str) -> None:
         if concurrency > len(result_files) - 1:
             concurrency = len(result_files) - 1
         worker_pool = multiprocessing.Pool(concurrency)
-        segment_size = int((len(result_files) - 1)/concurrency) + 1
-        ranges = [result_files[i*segment_size:(i+1)*segment_size + 1] for i in range(concurrency)]
-        invalid = [range for results in worker_pool.map(validate, ranges) for range in results]
+        segment_size = int((len(result_files) - 1) / concurrency) + 1
+        ranges = [
+            result_files[i * segment_size : (i + 1) * segment_size + 1]
+            for i in range(concurrency)
+        ]
+        invalid = [
+            range for results in worker_pool.map(validate, ranges) for range in results
+        ]
 
     json.dump(invalid, ofp)
     if outfile is not None:
         ofp.close()
 
 
-def sample(crawl_batches: List[str], choose_probability: float) -> Iterator[Dict[str, Any]]:
+def sample(
+    crawl_batches: List[str], choose_probability: float
+) -> Iterator[Dict[str, Any]]:
     """
     Given a directory containing only JSON files produced by an allrepos crawl, this generator
     yields the next sample.
@@ -299,26 +358,51 @@ def sample(crawl_batches: List[str], choose_probability: float) -> Iterator[Dict
     """
     assert 0 <= choose_probability <= 1
 
-    for batch in tqdm(crawl_batches, desc='batch'):
-        with open(batch, 'r') as ifp:
+    for batch in tqdm(crawl_batches, desc="batch"):
+        with open(batch, "r") as ifp:
             result = json.load(ifp)
-        for repository in tqdm(result['data'], desc='repository', leave=False):
+        for repository in tqdm(result["data"], desc="repository", leave=False):
             if random.random() < choose_probability:
                 yield repository
 
-@click.command(context_settings=dict(help_option_names=['-h', '--help']))
-@click.option('--crawldir', '-d', help='Path to directory in which crawl results should be written')
-@click.option('--outfile', '-o', type=click.File('w'), default=sys.stdout, help='Path to file to which samples should be written (default: stdout)')
-@click.option('--probability', '-p', type=float, help='Probability with which a repository in the crawl directory should be chosen')
-@click.option('--from-id', default=0,
-    help=(
-        'GitHub ID to begin sampling from (default: 0). Could have non-intuitive behavior '
-        'since it uses the id on the crawl batch file, and not the id on the repos themselves. '
-        'Uses the batch whose starting GitHub ID is the smallest one greater than --from-id.'
-    )
+
+@click.command(context_settings=dict(help_option_names=["-h", "--help"]))
+@click.option(
+    "--crawldir",
+    "-d",
+    help="Path to directory in which crawl results should be written",
 )
-@click.option('--to-id', type=int, default=None, help='GitHub ID to end sampling at (default: None)')
-def sample_handler(crawldir: str, outfile, probability: float, from_id: int,  to_id: str) -> None:
+@click.option(
+    "--outfile",
+    "-o",
+    type=click.File("w"),
+    default=sys.stdout,
+    help="Path to file to which samples should be written (default: stdout)",
+)
+@click.option(
+    "--probability",
+    "-p",
+    type=float,
+    help="Probability with which a repository in the crawl directory should be chosen",
+)
+@click.option(
+    "--from-id",
+    default=0,
+    help=(
+        "GitHub ID to begin sampling from (default: 0). Could have non-intuitive behavior "
+        "since it uses the id on the crawl batch file, and not the id on the repos themselves. "
+        "Uses the batch whose starting GitHub ID is the smallest one greater than --from-id."
+    ),
+)
+@click.option(
+    "--to-id",
+    type=int,
+    default=None,
+    help="GitHub ID to end sampling at (default: None)",
+)
+def sample_handler(
+    crawldir: str, outfile, probability: float, from_id: int, to_id: str
+) -> None:
     """
     Writes repositories sampled from a crawl directory to an output file in JSON lines format
 

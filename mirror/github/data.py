@@ -10,12 +10,12 @@ from pydantic import BaseModel, Field
 class MyBaseModel(BaseModel):
     class Config:
         validate_assignment = True
-        extra = 'ignore'
+        extra = "ignore"
 
 
 class CommitPublic(MyBaseModel):
-    #repo_id: str
-    #repo_html_url: str
+    # repo_id: str
+    # repo_html_url: str
     sha: Optional[str] = None
     commit_url: Optional[str] = None
     html_url: Optional[str] = None

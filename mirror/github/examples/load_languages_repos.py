@@ -21,4 +21,10 @@ language_ext = {
     "Python": ".py",
 }
 
-clone_repos.callback(crawldir="D:\\languages", stars_expression='>500', languages=tuple(language_ext.keys()), token='', amount=50)
+clone_repos.callback(
+    crawldir="D:\\languages",
+    stars_expression=">500",
+    languages=tuple(language_ext.keys()),
+    token="",
+    amount=50,
+)

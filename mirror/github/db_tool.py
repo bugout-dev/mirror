@@ -3,7 +3,7 @@ import traceback
 
 
 def create_snippets_table(conn):
-    """ create a table from the create_table_sql statement
+    """create a table from the create_table_sql statement
     :param conn: Connection object
     :param create_table_sql: a CREATE TABLE statement
     :return:
@@ -19,7 +19,6 @@ def create_snippets_table(conn):
                                         starting_line_number integer
                                     ); """
 
-
     try:
         c = conn.cursor()
         c.execute(sql_create_snippets_table)
@@ -29,7 +28,7 @@ def create_snippets_table(conn):
 
 
 def create_connection(db_file):
-    """ create a database connection to the SQLite database
+    """create a database connection to the SQLite database
         specified by db_file
     :param db_file: database file
     :return: Connection object or None
@@ -43,14 +42,17 @@ def create_connection(db_file):
 
     return conn
 
+
 def write_snippet_to_db(conn, **kwargs):
     table = "snippets"
-    #fields = ["snippet", "language", "repo_file_name", "github_repo_url", "license", "commit_hash", "starting_line_number"]
+    # fields = ["snippet", "language", "repo_file_name", "github_repo_url", "license", "commit_hash", "starting_line_number"]
     fields = kwargs.keys()
 
-    sql = sql = (f"INSERT OR IGNORE INTO {table} "
-                 f" ({','.join(fields)}) "
-                 f"VALUES({ ','.join(['?']*len(fields)) });")
+    sql = sql = (
+        f"INSERT OR IGNORE INTO {table} "
+        f" ({','.join(fields)}) "
+        f"VALUES({ ','.join(['?']*len(fields)) });"
+    )
     try:
         c = conn.cursor()
         result = c.execute(sql, tuple(kwargs.values()))
@@ -58,5 +60,5 @@ def write_snippet_to_db(conn, **kwargs):
         return result
     except Exception as err:
         for key, value in kwargs.items():
-            print(key,type(value))
-        traceback.print_exc()   
+            print(key, type(value))
+        traceback.print_exc()

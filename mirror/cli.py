@@ -16,6 +16,7 @@ def github() -> None:
     """'mirror - Tools for software project analysis'"""
     pass
 
+
 github.add_command(crawl_populator, name="crawl")
 github.add_command(nextid_populator, name="nextid")
 github.add_command(sample_populator, name="sample")
@@ -27,5 +28,5 @@ github.add_command(commits, name="commits")
 
 cli = click.CommandCollection(sources=[github])
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli()
