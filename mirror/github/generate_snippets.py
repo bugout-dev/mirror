@@ -21,6 +21,9 @@ from .. import settings
 from .utils import write_with_size
 
 
+class ConfigFileNotFoundError(Exception):
+    """Raised when language config file with file extention not applied."""
+    pass
 
 class ReadReposDirectoryError(Exception):
     """Raised when repos folder not set."""
@@ -78,12 +81,12 @@ def chunking(repo_path, ext: str, chunksize: int, lines_step: int, common_path):
                 while line_number <= len(file_lines) - 1 - chunksize:
                     corpus.append({"file_name": os.path.relpath(file_text.name, common_path),
                                    "start_line": line_number,
-                                   "chunk": chunk_encode(file_lines[line_number: line_number + chunksize])})
+                                   "chunk": "".join(file_lines[line_number: line_number + chunksize])})
                     line_number += lines_step
                 
                 corpus.append({"file_name": os.path.relpath(file_text.name, common_path),
                                "start_line": line_number,
-                               "chunk": chunk_encode(file_lines[line_number:])})
+                               "chunk": "".join(file_lines[line_number:])})
         
         except KeyboardInterrupt:
             raise KeyboardInterrupt('CTRL+C')
@@ -97,16 +100,15 @@ def chunking(repo_path, ext: str, chunksize: int, lines_step: int, common_path):
 @click.command(context_settings=dict(help_option_names=['-h', '--help']))
 @click.option('--crawldir', '-d', default='.', help='Snippets output filder.', show_default=True)
 @click.option('--languages-dir', '-L', help='Path to directory with languages repos.')
-@click.option('--chunksize', '-c', type=int, default=10, help='Size of code snipet.')
+@click.option('--chunksize', '-c', type=int, default=10, help='Size of code snippet.')
 @click.option('--rows-step', '-r', type=int, default=None, help='Distance between start rows.')
 @click.option('--sqlite-path', '-q', help='Sqlite for writing snippets.', default = None,  show_default=True)
-def generate_datasets(crawldir: str, languages_dir: Optional[str], chunksize: int, sqlite_path: Optional[str], rows_step: Optional[int]):
+@click.option('--languages-file', '-f', default=None, help='Path to json file with languages for extracting.')
+def generate_datasets(crawldir: str, languages_dir: Optional[str], chunksize: int, sqlite_path: Optional[str], rows_step: Optional[int], languages_file: str):
     
     """
     Create snippets dataset from cloned repos
     """
-
-    file_size_limit = 500000
 
     if not rows_step:
         rows_step = chunksize
@@ -117,14 +119,20 @@ def generate_datasets(crawldir: str, languages_dir: Optional[str], chunksize: in
             raise ReadReposDirectoryError('LANGUAGES_REPOS not set.')
 
 
-    if sqlite_path:
-        conn = db_tool.create_connection(sqlite_path)
-        db_tool.create_table_tasks(conn)
     
 
-    # Read languages file
+    
+
+    # Read languages config file
     try:
-        langs_file = Path(languages_dir) / "languages_config.json"
+        if not languages_file:
+            if not os.path.exists( Path(languages_dir) / "languages_config.json" ):
+                raise ConfigFileNotFoundError('Config file not found.')
+            else:
+                langs_file = Path(languages_dir) / "languages_config.json"
+        else:
+
+            langs_file = Path(languages_file)
         with langs_file.open('r', encoding='utf8') as langs:
             languages_ext = json.load(langs)
     except Exception as err:
@@ -140,103 +148,56 @@ def generate_datasets(crawldir: str, languages_dir: Optional[str], chunksize: in
     if not os.path.exists(snippets_dir):
         os.makedirs(snippets_dir)
 
-    # Create file with path to chunk
-    start_block = '{"data": ['
+    # Create connection
+    conn = db_tool.create_connection(os.path.join(snippets_dir,"snippets.db"))
+    db_tool.create_snippets_table(conn)
 
-    end_block = ']}'
+    for lang in languages_ext:
 
-    output_csv = Path(snippets_dir) / f"snippets.csv"
+        lang_path = os.path.join(languages_dir, lang)
+
+        meta_path =  os.path.join(lang_path, "meta.json")
+
+        with open(meta_path, 'r') as repos_meta_file:
+            repos_meta = json.load(repos_meta_file)
 
 
+        for repo in repos_meta["repos"]:
+            license = None
 
-    with open(output_csv, mode='wt', encoding='utf8', newline='') as output:
+            if repo['license']:
+                license =  repo['license']['spdx_id']
+            
 
-        fnames = ['file', 'index', 'language', 'repo_file_name', 'github_repo_url', 'license', 'commit_hash', 'starting_line_number']
-        writer = csv.DictWriter(output, fieldnames=fnames)
-        writer.writeheader() 
-  
-        file_index = 1 # start index
-        chunk_index = 0
+            language_chunks = chunking(os.path.join(lang_path,repo['name']),
+                                    languages_ext[lang],
+                                    chunksize,
+                                    rows_step,
+                                    languages_dir)
 
-        for lang in languages_ext:
-            lang_path = Path(languages_dir) / lang
 
-            if not os.path.exists(lang_path):
+            if not language_chunks:
                 continue
+            
+            for chunk_data in language_chunks:
 
-            #for repo in  [x[0] for x in os.walk(directory)]:
-
-            meta_path = lang_path / "meta.json"
-
-            with open(meta_path, 'r') as repos_meta_file:
-                repos_meta = json.load(repos_meta_file)
-
-
-            for repo in repos_meta["repos"]:
-                license = None
-
-                if repo['license']:
-                   license =  repo['license']['spdx_id']
-
-                language_chunks = chunking(os.path.join(lang_path,repo['name']),
-                                        languages_ext[lang],
-                                        chunksize,
-                                        rows_step,
-                                        languages_dir)
-                print(f"Created {len(language_chunks)} {lang} chanks.")
-
-                if not language_chunks:
-                    continue
-                
-                write_with_size(start_block, file_index, snippets_dir)
-                # github_repo_url, commit_hash, license
-                for i,chunk_data in enumerate(language_chunks):
-
-                    #for chunk in enumerate(language_chunks[chunk_file]):
-
-                    try:
-                        # writing and return file size
-                        current_size =  write_with_size(''.join(('"',chunk_data["chunk"],'"')),
-                                                        file_index,
-                                                        snippets_dir)
-                        
-                        # add path csv
-                        writer.writerow({'github_repo_url': repo["github_repo_url"],
-                                        'commit_hash': repo['commit_hash'],
-                                        'license': license,
-                                        'file' : os.path.join( f"{file_index}.json"),
-                                        'index': chunk_index,
-                                        'language': lang.lower(),
-                                        "repo_file_name": chunk_data["file_name"],
-                                        "starting_line_number": chunk_data["start_line"]})
-                        
-                        if sqlite_path:
-                            db_tool.write_snipet_to_db(conn, chunk_data["chunk"], lang)
-
-                        # create new file and restar chunk indexing
-                        if current_size > file_size_limit and i != len(language_chunks) :
-                            write_with_size(end_block, file_index, snippets_dir)
-                            file_index += 1
-                            chunk_index = 0
-                            write_with_size(start_block, file_index, snippets_dir)
-                        elif i == len(language_chunks)-1:
-                            write_with_size(end_block, file_index, snippets_dir)
-                            file_index += 1
-                            chunk_index = 0
-                        else:
-                            write_with_size(',', file_index, snippets_dir)
-
-                        chunk_index += 1
+                try:
                     
-                    except KeyboardInterrupt:
-                        raise KeyboardInterrupt('CTRL+C')
+                    db_tool.write_snippet_to_db(conn, **{ 'github_repo_url': repo["github_repo_url"],
+                                                          'commit_hash': repo['commit_hash'],
+                                                          'snippet': chunk_data["chunk"],
+                                                          'license': license,
+                                                          'language': lang.lower(),
+                                                          "repo_file_name": str(Path(chunk_data["file_name"])),
+                                                          "starting_line_number": chunk_data["start_line"]})
 
-                    except Exception as err:
-                        print(err)
-                        continue
-                write_with_size(end_block, file_index, snippets_dir)
-                file_index += 1
-                chunk_index = 0
+                
+                except KeyboardInterrupt:
+                    raise KeyboardInterrupt('CTRL+C')
+
+                except Exception as err:
+                    print(err)
+                    raise
 
     create_zip_file(snippets_dir)
     

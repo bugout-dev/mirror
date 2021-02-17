@@ -13,6 +13,7 @@ import click
 import requests
 
 from ..settings import GITHUB_TOKEN
+from .utils import forward_languages_config
 
 
 REMAINING_RATELIMIT_HEADER = 'X-RateLimit-Remaining'
@@ -106,7 +107,7 @@ def write_repos(data, alredy_parsed, date, files_counter, path, language, search
 
 @click.argument('languages', nargs=-1)
 
-@click.option('--min-rate-limit', '-l', type=int, default=30, help='Minimum remaining rate limit on API under which the crawl is interrupted')
+@click.option('--min-rate-limit', '-l', type=int, default=10, help='Minimum remaining rate limit on API under which the crawl is interrupted')
 
 @click.option('--languages-file', '-f', help='Path to json file with languages for extracting.')
 
@@ -130,18 +131,23 @@ def popular_repos(languages: tuple, stars_expression: str, crawldir: str, token:
     headers = {'accept': 'application/vnd.github.v3+json',
                'Authorization': f'token {GITHUB_TOKEN}'}
 
+    if not os.path.exists(crawldir):
+        os.makedirs(crawldir)
+
 
     if GITHUB_TOKEN is None:
         click.echo(f'start with low rate limit')
     
     if languages_file:
-
         try:
             with open(languages_file, 'r', encoding='utf8') as langs:
                 languages = json.load(langs)
 
+            forward_languages_config(languages_file, crawldir)
+
         except Exception as err:
-            print("Can't read langiages file. {err}")
+            traceback.print_exc()
+            print(f"Can't read langiages file. {err}")
 
 
     for language in languages:

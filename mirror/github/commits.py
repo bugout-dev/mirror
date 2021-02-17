@@ -12,7 +12,7 @@ import traceback
 from pathlib import Path
 from typing import Optional
 
-from .utils import flatten_json
+from .utils import flatten_json, get_nearest_value
 
 import requests
 import click
@@ -57,11 +57,7 @@ def commits_parser(github_commits, repo_id, html_url):
 
     return commits[0]['sha'], out
 
-def get_nearest_value(iterable, value):
-    """
-    simple return nearest value inside given iterable object
-    """
-    return min(iterable, key=lambda x: abs(int(x.split('.')[0]) - value))
+
 
 
 def read_repos(repos_dir, file_name, start_id, end_id):
@@ -113,15 +109,6 @@ def request_with_limit(repo, headers, min_rate_limit):
         else:
             raise('incorrect commit URL')
     return response
-
-
-def read_command_type(path):
-    """
-    Return type of command wich generated repos inside repos folder
-    """
-    with open(path, 'r', encoding='utf8') as first_file:
-        data = json.loads(first_file.read())
-    return data["command"]
 
 
 def get_repos_files(repos_dir, start_id, end_id):

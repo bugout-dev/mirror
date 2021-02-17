@@ -2,7 +2,7 @@ import sqlite3
 import traceback
 
 
-def create_table_tasks(conn):
+def create_snippets_table(conn):
     """ create a table from the create_table_sql statement
     :param conn: Connection object
     :param create_table_sql: a CREATE TABLE statement
@@ -10,8 +10,13 @@ def create_table_tasks(conn):
     """
     sql_create_snippets_table = """ CREATE TABLE IF NOT EXISTS snippets (
                                         id integer PRIMARY KEY,
-                                        snipet text NOT NULL,
-                                        lang text
+                                        snippet text NOT NULL,
+                                        language text NOT NULL,
+                                        repo_file_name text,
+                                        github_repo_url text,
+                                        license text,
+                                        commit_hash text,
+                                        starting_line_number integer
                                     ); """
 
 
@@ -38,14 +43,20 @@ def create_connection(db_file):
 
     return conn
 
-def write_snipet_to_db(conn, snipet, lang):
-    sql = """
-            INSERT OR IGNORE INTO snippets (snipet,lang) VALUES(?,?);
-          """
+def write_snippet_to_db(conn, **kwargs):
+    table = "snippets"
+    #fields = ["snippet", "language", "repo_file_name", "github_repo_url", "license", "commit_hash", "starting_line_number"]
+    fields = kwargs.keys()
+
+    sql = sql = (f"INSERT OR IGNORE INTO {table} "
+                 f" ({','.join(fields)}) "
+                 f"VALUES({ ','.join(['?']*len(fields)) });")
     try:
         c = conn.cursor()
-        result = c.execute(sql,(snipet, lang))
+        result = c.execute(sql, tuple(kwargs.values()))
         conn.commit()
         return result
     except Exception as err:
+        for key, value in kwargs.items():
+            print(key,type(value))
         traceback.print_exc()   

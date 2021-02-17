@@ -6,6 +6,31 @@ from pathlib import Path
 import click
 
 
+def get_nearest_value(iterable, value):
+    """
+    simple return nearest value inside given iterable object
+    """
+    return min(iterable, key=lambda x: abs(int(x.split('.')[0]) - value))
+
+def read_command_type(path):
+    """
+    Return type of command wich generated repos inside repos folder
+    """
+    with open(path, 'r', encoding='utf8') as first_file:
+        data = json.loads(first_file.read())
+    return data["command"]
+
+def forward_languages_config(input_config, output_dir):
+    """
+    Create languages config inside output for simplify pipelinr
+    """
+    
+    with open(input_config, 'r', encoding='utf8') as config_file:
+        config = json.load(config_file)
+    
+    with open(os.path.join(output_dir, "languages_config.json"), 'a', encoding='utf8') as config_file:
+        json.dump(config, config_file)
+
 def write_with_size(string, file_index, path):
     """
     Return current size after writing
