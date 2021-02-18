@@ -281,6 +281,7 @@ def commits(
                         "repo_url": repo["html_url"],
                         "commt_hash": sha,
                         "license": license,
+                        "language": repo["language"]
                     }
                 )
 
