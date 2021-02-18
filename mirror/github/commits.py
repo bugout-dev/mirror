@@ -221,7 +221,6 @@ def commits(
     start_block = '{ "command": "commits", "data": ['
 
     # 2 output idexing csv and commits
-
     commits_out = os.path.join(crawldir, "commits")
 
     csv_out = os.path.join(commits_out, "id_indexes.csv")

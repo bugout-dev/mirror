@@ -92,9 +92,6 @@ def json_files_to_csv(command: str, path_input_folder: str, path_output_csv: str
     if not inputs_path.is_dir():
         return
 
-    # if output_file.exists():
-    #     return
-
     if command == "commits":
 
         json_list = [file for file in os.listdir(inputs_path) if "commits" in file]

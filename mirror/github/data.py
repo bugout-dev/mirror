@@ -14,8 +14,6 @@ class MyBaseModel(BaseModel):
 
 
 class CommitPublic(MyBaseModel):
-    # repo_id: str
-    # repo_html_url: str
     sha: Optional[str] = None
     commit_url: Optional[str] = None
     html_url: Optional[str] = None

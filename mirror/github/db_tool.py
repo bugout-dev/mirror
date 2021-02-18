@@ -45,7 +45,6 @@ def create_connection(db_file):
 
 def write_snippet_to_db(conn, **kwargs):
     table = "snippets"
-    # fields = ["snippet", "language", "repo_file_name", "github_repo_url", "license", "commit_hash", "starting_line_number"]
     fields = kwargs.keys()
 
     sql = sql = (

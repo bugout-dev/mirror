@@ -277,12 +277,6 @@ def clone_repos(
                 except:
                     traceback.print_exc()
 
-    #         with open(os.path.join(crawldir, lang.capitalize(), "meta.json"), 'w') as meta_file:
-    #             meta_data["crawled_at"] = search_response.headers.get(DATETIME_HEADER)
-    #             json.dump(meta_data, meta_file)
-    # with open(os.path.join(crawldir, "languages_config.json"), 'w') as save_config:
-    #     json.dump(langs_conf, save_config)
-
 
 if __name__ == "__main__":
     clone_repos()
