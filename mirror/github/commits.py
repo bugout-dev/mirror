@@ -242,7 +242,7 @@ def commits(
         csv_out, mode="wt", encoding="utf8", newline=""
     ) as output:
 
-        fnames = ["file", "commt_hash", "license", "repo_url"]
+        fnames = ["file", "commt_hash", "license", "repo_url", "language"]
 
         writer = csv.DictWriter(output, fieldnames=fnames)
         writer.writeheader()
