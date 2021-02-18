@@ -16,7 +16,7 @@ from .utils import flatten_json, get_nearest_value
 import requests
 import click
 
-from .utils import write_with_size
+from .utils import write_with_size, read_command_type
 from .data import CommitPublic
 
 
