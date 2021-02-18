@@ -181,8 +181,7 @@ def get_repos_files(repos_dir, start_id, end_id):
     "-S",
     type=click.Choice(list(validate_models.keys())),
     default="CommitPublic",
-    help="Directory with repos files.",
-    case_sensitive=False,
+    help="Directory with repos files."
 )
 @click.option(
     "--token",
@@ -204,7 +203,7 @@ def commits(
     repos_dir: str,
     schema: str,
     token: Optional[str],
-    min_rate_limit: int,
+    min_rate_limit: int
 ):
 
     """
