@@ -269,6 +269,8 @@ def commits(
 
                 if repo["license"]:
                     license = repo["license"]["spdx_id"]
+                else:
+                    license = repo["license"]
 
                 # date of creating that commits file
                 date = commits_responce.headers.get(DATETIME_HEADER)
