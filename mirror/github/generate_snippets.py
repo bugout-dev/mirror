@@ -156,9 +156,9 @@ def generate_datasets(
         rows_step = chunksize
 
     if not languages_dir:
-        languages_dir = os.environ.get("LANGUAGES_REPOS")
+        languages_dir = os.environ.get("LANGUAGES_DIR")
         if not languages_dir:
-            raise ReadReposDirectoryError("LANGUAGES_REPOS not set.")
+            raise ReadReposDirectoryError("LANGUAGES_DIR not set.")
 
     # Read languages config file
     try:
