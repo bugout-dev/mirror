@@ -31,12 +31,16 @@ REMAINING_RATELIMIT_HEADER = "X-RateLimit-Remaining"
 DATETIME_HEADER = "Date"
 
 
-def validate(data, allowed_data):
+validate_models = {"CommitPublic": CommitPublic}
+
+
+def validate(data, allowed_data, schema):
     """Take a data structure and apply pydentic model."""
-    allowed_data.update(CommitPublic(**data).dict())
+    pydentic_class = validate_models[schema]
+    allowed_data.update(pydentic_class(**data).dict())
 
 
-def commits_parser(github_commits, repo_id, html_url):
+def commits_parser(github_commits, repo_id, html_url, schema):
 
     """
     Push commits via validator and add additional fileds.
@@ -51,7 +55,7 @@ def commits_parser(github_commits, repo_id, html_url):
         allowed_data = {"repo_id": repo_id, "repo_html_url": html_url}
 
         if commit:
-            validate(flatten_json(commit), allowed_data)
+            validate(flatten_json(commit), allowed_data, schema)
 
         out.append(json.dumps(allowed_data))
 
@@ -172,7 +176,14 @@ def get_repos_files(repos_dir, start_id, end_id):
 )
 @click.option("--crawldir", "-d", default=".", help='Path to save folder. default="." ')
 @click.option("--repos-dir", "-r", help="Directory with repos files.")
-@click.option("--schema", "-S", help="Directory with repos files.")
+@click.option(
+    "--schema",
+    "-S",
+    type=click.Choice(list(validate_models.keys())),
+    default="CommitPublic",
+    help="Directory with repos files.",
+    case_sensitive=False,
+)
 @click.option(
     "--token",
     "-t",
@@ -252,7 +263,7 @@ def commits(
                 commits_responce = request_with_limit(repo, headers, min_rate_limit)
 
                 sha, commits = commits_parser(
-                    commits_responce, repo["id"], repo["html_url"]
+                    commits_responce, repo["id"], repo["html_url"], schema
                 )
 
                 repo_dump = ",".join(commits)

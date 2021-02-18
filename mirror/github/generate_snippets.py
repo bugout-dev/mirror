@@ -240,7 +240,7 @@ def generate_datasets(
     create_zip_file(snippets_dir)
 
     with open(Path(snippets_dir) / ".." / f"meta.json", "w") as meta_out:
-        
+
         json.dump(
             {
                 "mirror version": settings.module_version,
