@@ -282,7 +282,6 @@ def commits(
                     commits_responce, repo["id"], repo["html_url"], schema
                 )
 
-
                 if repo["license"]:
                     license = repo["license"]["spdx_id"]
                 else:
