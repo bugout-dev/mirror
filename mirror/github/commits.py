@@ -282,7 +282,6 @@ def commits(
                     commits_responce, repo["id"], repo["html_url"], schema
                 )
 
-                repo_dump = ",".join(commits)
 
                 if repo["license"]:
                     license = repo["license"]["spdx_id"]
@@ -303,7 +302,7 @@ def commits(
                     }
                 )
 
-                current_size = write_with_size(repo_dump, file_index, commits_path)
+                current_size = write_with_size(commits, file_index, commits_path)
 
                 # Size regulation
                 if current_size > 5000000:
