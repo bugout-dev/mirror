@@ -200,7 +200,7 @@ def clone_repos(
 
     if os.path.exists(os.path.join(repos_dir, "languages_config.json")):
         forward_languages_config(
-            os.path.join(repos_dir, "languages_config.json"), repos_dir
+            os.path.join(repos_dir, "languages_config.json"), crawldir
         )
 
     if not os.path.exists(crawldir):
