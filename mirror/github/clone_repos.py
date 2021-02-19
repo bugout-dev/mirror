@@ -98,9 +98,7 @@ def read_repos(repos_dir, file_name, start_id, end_id):
     if os.path.isfile(repos_file_path):
         with open(repos_file_path, "r") as repos_file:
             if start_id and end_id:
-                return [
-                    repo for repo in json.load(repos_file)["data"] if repo["id"]
-                ]
+                return [repo for repo in json.load(repos_file)["data"] if repo["id"]]
             else:
                 return json.load(repos_file)["data"]
 
@@ -248,7 +246,7 @@ def clone_repos(
                         meta_data = json.load(meta)
 
                     with open(meta_file, "w") as meta:
-                         # rewind
+                        # rewind
 
                         meta_data["repos"].append(
                             {
@@ -274,7 +272,6 @@ def clone_repos(
                             }
                         )
                         json.dump(meta_data, meta)
-
 
                 except KeyboardInterrupt:
                     raise KeyboardInterrupt("CTRL+C")

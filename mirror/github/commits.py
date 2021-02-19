@@ -33,6 +33,7 @@ DATETIME_HEADER = "Date"
 
 validate_models = {"CommitPublic": CommitPublic}
 
+
 def dump_date(date, file_index, path):
     file_path = os.path.join(path, f"{file_index}.json")
 
@@ -40,8 +41,9 @@ def dump_date(date, file_index, path):
         data = json.load(file)
 
     with open(file_path, "w", newline="", encoding="utf8") as file:
-        data['crawled_at'] = date
+        data["crawled_at"] = date
         json.dump(data, file)
+
 
 def validate(data, allowed_data, schema):
     """Take a data structure and apply pydentic model."""
@@ -81,9 +83,7 @@ def read_repos(repos_dir, file_name, start_id, end_id):
     if os.path.isfile(repos_file_path):
         with open(repos_file_path, "r") as repos_file:
             if start_id and end_id:
-                return [
-                    repo for repo in json.load(repos_file)["data"] if repo["id"]
-                ]
+                return [repo for repo in json.load(repos_file)["data"] if repo["id"]]
             else:
                 return json.load(repos_file)["data"]
 
@@ -237,7 +237,7 @@ def commits(
 
     files_for_proccessing = get_repos_files(repos_dir, start_id, end_id)
 
-    start_block = { "command": "commits", "data": [], "crawled_at": None}
+    start_block = {"command": "commits", "data": [], "crawled_at": None}
 
     # 2 output idexing csv and commits
     commits_path = os.path.join(crawldir, "commits")

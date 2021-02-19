@@ -19,6 +19,7 @@ import click
 from . import db_tool
 from .. import settings
 
+
 class ConfigFileNotFoundError(Exception):
     """Raised when language config file with file extention not applied."""
 
