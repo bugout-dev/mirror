@@ -33,6 +33,13 @@ DATETIME_HEADER = "Date"
 
 validate_models = {"CommitPublic": CommitPublic}
 
+def dump_date(date, file_index, path):
+    file_path = os.path.join(path, f"{file_index}.json")
+
+    with open(file_path, "r+", newline="", encoding="utf8") as file:
+        data = json.load(file)
+        data['crawled_at'] = date
+        json.dump(data, file)
 
 def validate(data, allowed_data, schema):
     """Take a data structure and apply pydentic model."""
@@ -57,7 +64,7 @@ def commits_parser(github_commits, repo_id, html_url, schema):
         if commit:
             validate(flatten_json(commit), allowed_data, schema)
 
-        out.append(json.dumps(allowed_data))
+        out.append(allowed_data)
 
     return commits[0]["sha"], out
 
@@ -228,15 +235,15 @@ def commits(
 
     files_for_proccessing = get_repos_files(repos_dir, start_id, end_id)
 
-    start_block = '{ "command": "commits", "data": ['
+    start_block = { "command": "commits", "data": [], "crawled_at": None}
 
     # 2 output idexing csv and commits
-    commits_out = os.path.join(crawldir, "commits")
+    commits_path = os.path.join(crawldir, "commits")
 
-    csv_out = os.path.join(commits_out, "id_indexes.csv")
+    csv_out = os.path.join(commits_path, "id_indexes.csv")
 
-    if not os.path.exists(commits_out):
-        os.makedirs(commits_out)
+    if not os.path.exists(commits_path):
+        os.makedirs(commits_path)
 
     with click.progressbar(files_for_proccessing) as bar, open(
         csv_out, mode="wt", encoding="utf8", newline=""
@@ -254,7 +261,7 @@ def commits(
             if not repos:
                 continue
 
-            write_with_size(start_block, file_index, commits_out)
+            write_with_size(start_block, file_index, commits_path)
 
             for i, repo in enumerate(repos):
 
@@ -286,24 +293,17 @@ def commits(
                     }
                 )
 
-                current_size = write_with_size(repo_dump, file_index, commits_out)
+                current_size = write_with_size(repo_dump, file_index, commits_path)
 
                 # Size regulation
                 if current_size > 5000000:
-
-                    write_with_size(
-                        f'], "crawled_at": "{date}" {"}"}', file_index, commits_out
-                    )
+                    dump_date(date, file_index, commits_path)
                     file_index += 1
-                    write_with_size(start_block, file_index, commits_out)
+                    write_with_size(start_block, file_index, commits_path)
                 elif i == len(repos) - 1:
-                    write_with_size(
-                        f'], "crawled_at": "{date}" {"}"}', file_index, commits_out
-                    )
+                    dump_date(date, file_index, commits_path)
                     file_index += 1
-                else:
-                    write_with_size(",", file_index, commits_out)
-    create_zip_file(commits_out)
+    create_zip_file(commits_path)
 
 
 if __name__ == "__main__":

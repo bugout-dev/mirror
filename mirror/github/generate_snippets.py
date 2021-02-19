@@ -18,8 +18,6 @@ import click
 
 from . import db_tool
 from .. import settings
-from .utils import write_with_size
-
 
 class ConfigFileNotFoundError(Exception):
     """Raised when language config file with file extention not applied."""

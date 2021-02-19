@@ -36,15 +36,17 @@ def forward_languages_config(input_config, output_dir):
         json.dump(config, config_file)
 
 
-def write_with_size(string, file_index, path):
+def write_with_size(json_list, file_index, path):
     """
     Return current size after writing
     """
 
     file_path = os.path.join(path, f"{file_index}.json")
 
-    with open(file_path, "a", newline="", encoding="utf8") as file:
-        file.write(string)
+    with open(file_path, "r+", newline="", encoding="utf8") as file:
+        data = json.load(file)
+        data['data'].extend(json_list)
+        json.dump(data, file)
         size_of_file = file.tell()
     return size_of_file
 

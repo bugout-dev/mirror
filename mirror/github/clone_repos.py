@@ -271,6 +271,9 @@ def clone_repos(
                             }
                         )
 
+                        json.dump(meta_data, meta)
+
+
                 except KeyboardInterrupt:
                     raise KeyboardInterrupt("CTRL+C")
 
