@@ -18,7 +18,7 @@ def read_command_type(path):
     Return type of command wich generated repos inside repos folder
     """
     with open(path, "r", encoding="utf8") as first_file:
-        data = json.loads(first_file.read())
+        data = json.load(first_file)
     return data["command"]
 
 
@@ -104,7 +104,7 @@ def json_files_to_csv(command: str, path_input_folder: str, path_output_csv: str
         with open(read_file, "r") as income, open(
             output_file, "a", newline=""
         ) as csv_out:
-            json_data = json.loads(income.read())["data"]
+            json_data = json.load(income)["data"]
             print(json_data[0].keys())
             first_repo = list(json_data[0].keys())[0]
             commit = json_data[0][first_repo][0]
@@ -127,7 +127,7 @@ def json_files_to_csv(command: str, path_input_folder: str, path_output_csv: str
             with open(read_file, "r", encoding="utf-8") as income:
                 print(read_file)
                 try:
-                    json_data = json.loads(income.read())["data"]
+                    json_data = json.load(income)["data"]
                 except:
                     print("not processed")
 

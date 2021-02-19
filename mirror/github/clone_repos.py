@@ -99,10 +99,10 @@ def read_repos(repos_dir, file_name, start_id, end_id):
         with open(repos_file_path, "r") as repos_file:
             if start_id and end_id:
                 return [
-                    repo for repo in json.loads(repos_file.read())["data"] if repo["id"]
+                    repo for repo in json.load(repos_file)["data"] if repo["id"]
                 ]
             else:
-                return json.loads(repos_file.read())["data"]
+                return json.load(repos_file)["data"]
 
 
 def get_repos_files(repos_dir, start_id, end_id):
