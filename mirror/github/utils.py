@@ -31,7 +31,7 @@ def forward_languages_config(input_config, output_dir):
         config = json.load(config_file)
 
     with open(
-        os.path.join(output_dir, "languages_config.json"), "a", encoding="utf8"
+        os.path.join(output_dir, "languages_config.json"), "w", encoding="utf8"
     ) as config_file:
         json.dump(config, config_file)
 
