@@ -44,6 +44,13 @@ def dump_date(date, file_index, path):
         data["crawled_at"] = date
         json.dump(data, file)
 
+def create_file(init_json, file_index, path):
+    file_path = os.path.join(path, f"{file_index}.json")
+    
+    with open(file_path, "w", encoding="utf8") as file:
+        
+        json.dump(data, init_json)
+
 
 def validate(data, allowed_data, schema):
     """Take a data structure and apply pydentic model."""
@@ -263,7 +270,7 @@ def commits(
             if not repos:
                 continue
 
-            write_with_size(start_block, file_index, commits_path)
+            create_file(start_block, file_index, commits_path)
 
             for i, repo in enumerate(repos):
 
@@ -301,7 +308,7 @@ def commits(
                 if current_size > 5000000:
                     dump_date(date, file_index, commits_path)
                     file_index += 1
-                    write_with_size(start_block, file_index, commits_path)
+                    create_file(start_block, file_index, commits_path)
                 elif i == len(repos) - 1:
                     dump_date(date, file_index, commits_path)
                     file_index += 1
