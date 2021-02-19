@@ -206,8 +206,6 @@ def clone_repos(
             os.path.join(repos_dir, "languages_config.json"), crawldir
         )
 
-
-
     headers = {
         "accept": "application/vnd.github.v3+json",
         "Authorization": f"token {GITHUB_TOKEN}",

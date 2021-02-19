@@ -44,11 +44,12 @@ def dump_date(date, file_index, path):
         data["crawled_at"] = date
         json.dump(data, file)
 
+
 def create_file(init_json, file_index, path):
     file_path = os.path.join(path, f"{file_index}.json")
-    
+
     with open(file_path, "w", encoding="utf8") as file:
-        
+
         json.dump(init_json, file)
 
 
