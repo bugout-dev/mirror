@@ -49,7 +49,7 @@ def create_file(init_json, file_index, path):
     
     with open(file_path, "w", encoding="utf8") as file:
         
-        json.dump(data, init_json)
+        json.dump(init_json, file)
 
 
 def validate(data, allowed_data, schema):
