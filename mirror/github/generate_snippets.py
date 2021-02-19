@@ -123,7 +123,7 @@ def chunking(repo_path, ext: str, chunksize: int, lines_step: int, common_path):
 @click.option("--languages-dir", "-L", help="Path to directory with languages repos.")
 @click.option("--chunksize", "-c", type=int, default=10, help="Size of code snippet.")
 @click.option(
-    "--rows-step", "-r", type=int, default=None, help="Distance between start rows."
+    "--rows-step", "-s", type=int, default=None, help="Distance between start rows."
 )
 @click.option(
     "--sqlite-path",
