@@ -192,6 +192,9 @@ def generate_datasets(
 
         meta_path = os.path.join(lang_path, "meta.json")
 
+        if not os.path.exists(meta_path):
+            continue
+
         with open(meta_path, "r") as repos_meta_file:
             repos_meta = json.load(repos_meta_file)
 
