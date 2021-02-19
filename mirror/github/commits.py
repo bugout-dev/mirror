@@ -36,8 +36,10 @@ validate_models = {"CommitPublic": CommitPublic}
 def dump_date(date, file_index, path):
     file_path = os.path.join(path, f"{file_index}.json")
 
-    with open(file_path, "r+", newline="", encoding="utf8") as file:
+    with open(file_path, "r", newline="", encoding="utf8") as file:
         data = json.load(file)
+
+    with open(file_path, "w", newline="", encoding="utf8") as file:
         data['crawled_at'] = date
         json.dump(data, file)
 

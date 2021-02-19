@@ -244,8 +244,11 @@ def clone_repos(
                         cwd=os.path.join(lang_path, repo["name"]),
                     ).stdout
 
-                    with open(meta_file, "r+") as meta:
+                    with open(meta_file, "r") as meta:
                         meta_data = json.load(meta)
+
+                    with open(meta_file, "w") as meta:
+                         # rewind
 
                         meta_data["repos"].append(
                             {
@@ -270,7 +273,6 @@ def clone_repos(
                                 },
                             }
                         )
-
                         json.dump(meta_data, meta)
 
 

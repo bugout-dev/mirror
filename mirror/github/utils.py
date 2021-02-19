@@ -43,8 +43,10 @@ def write_with_size(json_list, file_index, path):
 
     file_path = os.path.join(path, f"{file_index}.json")
 
-    with open(file_path, "r+", newline="", encoding="utf8") as file:
+    with open(file_path, "r", encoding="utf8") as file:
         data = json.load(file)
+    
+    with open(file_path, "W", encoding="utf8") as file:
         data['data'].extend(json_list)
         json.dump(data, file)
         size_of_file = file.tell()
