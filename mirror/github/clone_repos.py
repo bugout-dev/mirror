@@ -198,13 +198,15 @@ def clone_repos(
     else:
         GITHUB_TOKEN = token
 
+    if not os.path.exists(crawldir):
+        os.makedirs(crawldir)
+
     if os.path.exists(os.path.join(repos_dir, "languages_config.json")):
         forward_languages_config(
             os.path.join(repos_dir, "languages_config.json"), crawldir
         )
 
-    if not os.path.exists(crawldir):
-        os.makedirs(crawldir)
+
 
     headers = {
         "accept": "application/vnd.github.v3+json",
