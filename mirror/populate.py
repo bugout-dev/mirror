@@ -6,10 +6,11 @@ subcommands.
 import argparse
 from typing import Callable, Dict
 
+
 def populate_cli(
-        parser: argparse.ArgumentParser,
-        subcommand_populators: Dict[str, Callable[[argparse.ArgumentParser], None]]
-    ) -> None:
+    parser: argparse.ArgumentParser,
+    subcommand_populators: Dict[str, Callable[[argparse.ArgumentParser], None]],
+) -> None:
     """
     Populates an argparse.ArgumentParser instance with the given subcommands
 

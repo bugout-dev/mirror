@@ -9,9 +9,10 @@ import sqlite3
 import sys
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
-from tqdm import tqdm
+from tqdm import tqdm  # type: ignore
 import click
 from .allrepos import ordered_crawl
+
 
 def setup_database(conn: sqlite3.Connection) -> None:
     """
@@ -49,15 +50,17 @@ def setup_database(conn: sqlite3.Connection) -> None:
     c.execute(create_history)
     conn.commit()
 
+
 class SyncParseError(Exception):
     """
     Returned if there was an error parsing repository metadata
     """
 
+
 def parse_repository_metadata(
-        result_file: str,
-        metadata: Dict[str, Any],
-    ) -> Tuple[Dict[str, Any], Optional[SyncParseError]]:
+    result_file: str,
+    metadata: Dict[str, Any],
+) -> Tuple[Dict[str, Any], Optional[SyncParseError]]:
     """
     Parses repository metadata into format used for synchronization
 
@@ -74,28 +77,30 @@ def parse_repository_metadata(
     if metadata is None:
         return (
             parsed_metadata,
-            SyncParseError('Corruption: {} - Received None as metadata'.format(result_file)),
+            SyncParseError(
+                "Corruption: {} - Received None as metadata".format(result_file)
+            ),
         )
 
     try:
-        parsed_metadata['id'] = metadata['id']
-        parsed_metadata['full_name'] = metadata['full_name']
-        parsed_metadata['owner_login'] = metadata['owner']['login']
-        parsed_metadata['html_url'] = metadata['html_url']
-        parsed_metadata['url'] = metadata['url']
-        parsed_metadata['fork'] = metadata['fork']
+        parsed_metadata["id"] = metadata["id"]
+        parsed_metadata["full_name"] = metadata["full_name"]
+        parsed_metadata["owner_login"] = metadata["owner"]["login"]
+        parsed_metadata["html_url"] = metadata["html_url"]
+        parsed_metadata["url"] = metadata["url"]
+        parsed_metadata["fork"] = metadata["fork"]
     except Exception as err:
         return (
             parsed_metadata,
-            SyncParseError('Corruption: {} - {}'.format(result_file, repr(err))),
+            SyncParseError("Corruption: {} - {}".format(result_file, repr(err))),
         )
 
     return parsed_metadata, None
 
+
 def unsynced_results(
-        conn: sqlite3.Connection,
-        results: List[Tuple[str, int]]
-    ) -> Iterator[Tuple[Dict[str, Any], Optional[SyncParseError]]]:
+    conn: sqlite3.Connection, results: List[Tuple[str, int]]
+) -> Iterator[Tuple[Dict[str, Any], Optional[SyncParseError]]]:
     """
     Given a sorted list of items in a crawl directory (as returned by allrepos.ordered_crawl),
     iterates over the entries that need to be synchronized into the given database.
@@ -110,7 +115,7 @@ def unsynced_results(
     """
     last_id = -1
     c = conn.cursor()
-    selector = 'SELECT MAX(github_id) FROM history;'
+    selector = "SELECT MAX(github_id) FROM history;"
     c.execute(selector)
     r = c.fetchone()
     if r[0] is not None:
@@ -125,27 +130,28 @@ def unsynced_results(
 
     if cutoff > -1:
         result_file, _ = results[cutoff]
-        with open(result_file, 'r') as ifp:
+        with open(result_file, "r") as ifp:
             crawl_result = json.load(ifp)
-        data = crawl_result.get('data', [])
+        data = crawl_result.get("data", [])
         for item in data:
-            if item.get('id', -1) > last_id:
+            if item.get("id", -1) > last_id:
                 yield parse_repository_metadata(result_file, item)
 
-    if cutoff == len(results)-1:
+    if cutoff == len(results) - 1:
         return None
 
-    for result_file, _ in results[cutoff+1:]:
-        with open(result_file, 'r') as ifp:
+    for result_file, _ in results[cutoff + 1 :]:
+        with open(result_file, "r") as ifp:
             crawl_result = json.load(ifp)
-        for item in crawl_result.get('data', []):
+        for item in crawl_result.get("data", []):
             yield parse_repository_metadata(result_file, item)
 
+
 def sync(
-        conn: sqlite3.Connection,
-        results: Iterator[Tuple[Dict[str, Any], Optional[SyncParseError]]],
-        batch_size: int
-    ) -> int:
+    conn: sqlite3.Connection,
+    results: Iterator[Tuple[Dict[str, Any], Optional[SyncParseError]]],
+    batch_size: int,
+) -> int:
     """
     Synchronizes a list of results from a github crawl into the SQLite database represented by the
     given connection.
@@ -165,26 +171,26 @@ def sync(
     VALUES (?, ?, ?, ?, ?, ?)
     """
 
-    update_history = 'INSERT INTO history(github_id, synced_at) VALUES (?, ?)'
+    update_history = "INSERT INTO history(github_id, synced_at) VALUES (?, ?)"
 
     synced = 0
     batch = []
     github_id = -1
     for item, err in tqdm(results):
         if err is not None:
-            print('Parse error - {}'.format(repr(err)), file=sys.stderr)
+            print("Parse error - {}".format(repr(err)), file=sys.stderr)
             continue
 
         parsed_item = (
-            item['id'],
-            item['full_name'],
-            item['owner_login'],
-            item['html_url'],
-            item['url'],
-            item['fork'],
+            item["id"],
+            item["full_name"],
+            item["owner_login"],
+            item["html_url"],
+            item["url"],
+            item["fork"],
         )
         batch.append(parsed_item)
-        github_id = item['id']
+        github_id = item["id"]
 
         if len(batch) % batch_size == 0:
             c.executemany(insertion, batch)
@@ -202,11 +208,21 @@ def sync(
     return synced
 
 
-@click.command()
-@click.option('--setup', help='If set, creates the relevant tables in the given database')
-@click.option('--crawldir', '-d', help='Path to directory containing results of a GitHub crawl')
-@click.option('--batch-size', '-b', type=int, default=1000, help='Number of repositories to sync at a time (database transaction batching)')
-@click.option('--database', '-o', help='Path to database file')
+@click.command(context_settings=dict(help_option_names=["-h", "--help"]))
+@click.option(
+    "--setup", help="If set, creates the relevant tables in the given database"
+)
+@click.option(
+    "--crawldir", "-d", help="Path to directory containing results of a GitHub crawl"
+)
+@click.option(
+    "--batch-size",
+    "-b",
+    type=int,
+    default=1000,
+    help="Number of repositories to sync at a time (database transaction batching)",
+)
+@click.option("--database", "-o", help="Path to database file")
 def handler(setup: str, crawldir: str, batch_size: int, database: str) -> None:
     """
     CLI handler for sync functionality

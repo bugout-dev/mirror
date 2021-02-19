@@ -1,0 +1,6 @@
+{	
+    "PowerShell": ["ps1"],
+    "Ruby": ["rb"],
+    "JavaScript": ["js"],
+    "Python": ["py"]
+}

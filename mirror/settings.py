@@ -2,6 +2,11 @@ import os
 import uuid
 from typing import Optional
 
+from . import __version__
+
+MODULE_NAME = "mirror"
+
+module_version = __version__
 
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 LANGUAGES_DIR = os.environ.get("LANGUAGES_DIR")
