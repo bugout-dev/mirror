@@ -35,7 +35,7 @@ setup(
         "Topic :: Software Development :: Libraries",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    python_requires=">=3.8",
+    python_requires=">=3.5",
     packages=find_packages(),
     package_data={"bugout": ["py.typed"]},
     zip_safe=False,
