@@ -1,15 +1,44 @@
 {
-    "PowerShell": ["ps1"],
-    "Ruby": ["rb"],
-    "JavaScript": ["js"],
-    "Python": ["py"],
-    "Markdown": ["md"],
-    "Text": ["txt"],
-    "C": ["c"],
-    "C++": ["C", "cpp"],
-    "Jupyter": ["ipynb"],
-    "Shell": ["sh"],
-    "Bash": ["bash"],
-    "JSON": ["json", "jsonl"],
-    "YAML": ["yml", "yaml"]
+    "PowerShell": [
+        "ps1"
+    ],
+    "Ruby": [
+        "rb"
+    ],
+    "JavaScript": [
+        "js"
+    ],
+    "Python": [
+        "py"
+    ],
+    "Markdown": [
+        "md"
+    ],
+    "Text": [
+        "txt"
+    ],
+    "C": [
+        "c"
+    ],
+    "C++": [
+        "cc",
+        "cpp"
+    ],
+    "Jupyter": [
+        "ipynb"
+    ],
+    "Shell": [
+        "sh"
+    ],
+    "Bash": [
+        "bash"
+    ],
+    "JSON": [
+        "json",
+        "jsonl"
+    ],
+    "YAML": [
+        "yml",
+        "yaml"
+    ]
 }

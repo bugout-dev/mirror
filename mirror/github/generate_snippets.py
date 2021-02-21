@@ -76,7 +76,7 @@ class ChunkLoader:
                     )
                     normalized_file_extension = file_extension.split(".")[-1]
                     file_language = self.extension_language_dict[
-                        normalized_file_extension
+                        normalized_file_extension.lower()
                     ]
                     if (
                         normalized_file_extension == ""
