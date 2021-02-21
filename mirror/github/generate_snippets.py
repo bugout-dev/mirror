@@ -14,6 +14,10 @@ from . import db_tool
 from .. import settings
 
 
+class FileTooLarge(Exception):
+    pass
+
+
 class ChunkLoader:
     def __init__(
         self,
@@ -23,6 +27,7 @@ class ChunkLoader:
         rows_step,
         batch_size,
         common_path,
+        max_file_bytes: int = 1 * 1024 * 1024,
     ):
         self.line_index = 0
         self.file_index = 0
@@ -32,6 +37,7 @@ class ChunkLoader:
         self.batch_size = batch_size
         self.common_path = common_path
         self.extension_language_dict = extension_language_dict
+        self.max_file_bytes = max_file_bytes
 
     def next_file(self):
         self.file_index += 1
@@ -44,7 +50,8 @@ class ChunkLoader:
             if self.file_index == len(self.files):
                 return chunks
 
-            file_path = os.path.relpath(self.files[self.file_index], self.common_path)
+            file_path = self.files[self.file_index]
+            file_relpath = os.path.relpath(file_path, self.common_path)
 
             try:
                 # TODO: need think about encoding becuse it's normal case use cp1252 for powershel scripts
@@ -60,6 +67,12 @@ class ChunkLoader:
                     ) as file_text:
                         file_lines = file_text.readlines()
 
+                statinfo = os.stat(file_path)
+                if statinfo.st_size > self.max_file_bytes:
+                    raise FileTooLarge(
+                        f"File {file_relpath} contained {statinfo.st_bytes} bytes, which is more than max_file_bytes={self.max_file_bytes}"
+                    )
+
                 while self.line_index <= len(file_lines) - 1 - self.chunk_size:
 
                     if self.line_index + self.chunk_size >= len(file_lines):
@@ -72,7 +85,7 @@ class ChunkLoader:
                         )
 
                     name_without_extension, file_extension = os.path.splitext(
-                        os.path.basename(file_path)
+                        os.path.basename(file_relpath)
                     )
                     normalized_file_extension = file_extension.split(".")[-1]
                     file_language = self.extension_language_dict[
@@ -87,7 +100,7 @@ class ChunkLoader:
                     chunks.append(
                         {
                             "language": file_language,
-                            "file_name": file_path,
+                            "file_name": file_relpath,
                             "start_line": self.line_index,
                             "chunk": snippet,
                         }
@@ -101,7 +114,7 @@ class ChunkLoader:
             except KeyboardInterrupt:
                 raise KeyboardInterrupt("CTRL+C")
             except:
-                print(f"Error processing file: {file_path}", file=sys.stderr)
+                print(f"Error processing file: {file_relpath}", file=sys.stderr)
 
             self.next_file()
 
