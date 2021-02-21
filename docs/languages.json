@@ -40,5 +40,8 @@
     "YAML": [
         "yml",
         "yaml"
+    ],
+    "HTML": [
+        "html"
     ]
 }
