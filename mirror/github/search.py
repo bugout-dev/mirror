@@ -53,7 +53,6 @@ def encode_query(stars_expression, language):
 
 
 def get_total_count(search_query, headers, min_rate_limit):
-
     search_url = (
         f"https://api.github.com/search/repositories?q={search_query}&per_page=100"
     )
@@ -135,7 +134,6 @@ def popular_repos(
     min_rate_limit: int,
     languages_file: str,
 ):
-
     """
     Crawl via search api.
     Search api have limitation 1000 results per search quary.
@@ -153,8 +151,9 @@ def popular_repos(
 
     headers = {
         "accept": "application/vnd.github.v3+json",
-        "Authorization": f"token {GITHUB_TOKEN}",
     }
+    if GITHUB_TOKEN is not None:
+        headers["Authorization"] = f"token {GITHUB_TOKEN}"
 
     if not os.path.exists(crawldir):
         os.makedirs(crawldir)
@@ -179,7 +178,6 @@ def popular_repos(
         init_search_query = encode_query(stars_expression, language)
 
         total_count = get_total_count(init_search_query, headers, min_rate_limit)
-
         if not total_count:
             continue
 
