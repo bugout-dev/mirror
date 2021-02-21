@@ -43,18 +43,17 @@ def create_connection(db_file):
     return conn
 
 
-
-# "github_repo_url": rep
-# "commit_hash": repo["c
-# "snippet": chunk_data[
-# "license": license,
-# "language": lang.lower
-# "repo_file_name": str(
-# "starting_line_number"
-
 def write_snippet_to_db(conn, batch):
     table = "snippets"
-    fields = ["github_repo_url", "commit_hash", "snippet", "license", "language", "repo_file_name", "starting_line_number"]
+    fields = [
+        "github_repo_url",
+        "commit_hash",
+        "snippet",
+        "license",
+        "language",
+        "repo_file_name",
+        "starting_line_number",
+    ]
 
     sql = sql = (
         f"INSERT OR IGNORE INTO {table} "
