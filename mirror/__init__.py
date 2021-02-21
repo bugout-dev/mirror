@@ -7,7 +7,7 @@ __description__ = "Tools for software project analysis"
 
 __email__ = "engineering@bugout.dev"
 __license__ = "MIT"
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 
 __all__ = (
     "__author__",
