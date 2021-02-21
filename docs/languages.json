@@ -12,7 +12,8 @@
         "py"
     ],
     "Markdown": [
-        "md"
+        "md",
+        "markdown"
     ],
     "Text": [
         "txt"
