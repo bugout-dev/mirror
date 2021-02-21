@@ -47,8 +47,8 @@ def request_with_limit(url, headers, min_rate_limit):
 
 
 def encode_query(stars_expression, language):
-    stars_encoding = str(urllib.parse.unquote_plus(f"stars:{stars_expression}"))
-    lang_encoding = str(urllib.parse.unquote_plus(f"language:{language.capitalize()}"))
+    stars_encoding = str(urllib.parse.quote(f"stars:{stars_expression}"))
+    lang_encoding = str(urllib.parse.quote(f"language:{language.capitalize()}"))
     return f"{stars_encoding}+{lang_encoding}"
 
 
