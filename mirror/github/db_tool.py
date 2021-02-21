@@ -43,9 +43,17 @@ def create_connection(db_file):
     return conn
 
 
-def write_snippet_to_db(conn, **kwargs):
+def write_snippet_to_db(conn, batch):
     table = "snippets"
-    fields = kwargs.keys()
+    fields = [
+        "github_repo_url",
+        "commit_hash",
+        "snippet",
+        "license",
+        "language",
+        "repo_file_name",
+        "starting_line_number",
+    ]
 
     sql = sql = (
         f"INSERT OR IGNORE INTO {table} "
@@ -54,10 +62,8 @@ def write_snippet_to_db(conn, **kwargs):
     )
     try:
         c = conn.cursor()
-        result = c.execute(sql, tuple(kwargs.values()))
+        result = c.executemany(sql, batch)
         conn.commit()
         return result
     except Exception as err:
-        for key, value in kwargs.items():
-            print(key, type(value))
         traceback.print_exc()

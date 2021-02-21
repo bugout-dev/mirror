@@ -20,6 +20,79 @@ from . import db_tool
 from .. import settings
 
 
+class ChunkLoader:
+    def __init__(self, repo_path, ext, chunksize, rows_step, batch_size, common_path):
+        self.line_index = 0
+        self.file_index = 0
+        self.chunk_size = chunksize
+        self.rows_step = rows_step
+        self.files = searching_all_files(repo_path, ext)
+        self.batch_size = batch_size
+        self.common_path = common_path
+
+    def get_next_chunks(self):
+        chunks = []
+
+        while True:
+
+            if self.file_index == len(self.files):
+                return chunks
+
+            try:
+                # TODO: need think about encoding becuse it's normal case use cp1252 for powershel scripts
+                try:
+                    with open(
+                        self.files[self.file_index], "r", encoding="utf-8"
+                    ) as file_text:
+
+                        file_lines = file_text.readlines()
+                except:
+                    with open(
+                        self.files[self.file_index], "r", encoding="cp1252"
+                    ) as file_text:
+
+                        file_lines = file_text.readlines()
+
+                file_path = os.path.relpath(
+                    self.files[self.file_index], self.common_path
+                )
+
+                while self.line_index <= len(file_lines) - 1 - self.chunk_size:
+
+                    if self.line_index + self.chunk_size >= len(file_lines):
+                        snippet = "".join(file_lines[self.line_index :])
+                    else:
+                        snippet = "".join(
+                            file_lines[
+                                self.line_index : self.line_index + self.chunk_size
+                            ]
+                        )
+
+                    chunks.append(
+                        {
+                            "file_name": file_path,
+                            "start_line": self.line_index,
+                            "chunk": snippet,
+                        }
+                    )
+
+                    self.line_index += self.rows_step
+
+                    if len(chunks) == self.batch_size:
+                        return chunks
+
+            except KeyboardInterrupt:
+                raise KeyboardInterrupt("CTRL+C")
+            except:
+                traceback.print_exc()
+                continue
+
+            self.line_index = 0
+            self.file_index += 1
+
+        return chunks
+
+
 class ConfigFileNotFoundError(Exception):
     """Raised when language config file with file extention not applied."""
 
@@ -73,63 +146,28 @@ def chunk_encode(iterable_lines):
     return base64.b64encode("".join(iterable_lines).encode("utf8")).decode("utf8")
 
 
-def chunking(repo_path, ext: str, chunksize: int, lines_step: int, common_path):
-
-    """
-    Create chunks from given file extemtion and language
-    """
-    corpus = []
-
-    for source_file in searching_all_files(repo_path, ext):
-
-        try:
-
-            line_number = 0
-            with open(source_file, "r", encoding="utf8") as file_text:
-
-                file_lines = file_text.readlines()
-                while line_number <= len(file_lines) - 1 - chunksize:
-                    corpus.append(
-                        {
-                            "file_name": os.path.relpath(file_text.name, common_path),
-                            "start_line": line_number,
-                            "chunk": "".join(
-                                file_lines[line_number : line_number + chunksize]
-                            ),
-                        }
-                    )
-                    line_number += lines_step
-
-                corpus.append(
-                    {
-                        "file_name": os.path.relpath(file_text.name, common_path),
-                        "start_line": line_number,
-                        "chunk": "".join(file_lines[line_number:]),
-                    }
-                )
-
-        except KeyboardInterrupt:
-            raise KeyboardInterrupt("CTRL+C")
-        except:
-            traceback.print_exc()
-            continue
-    return corpus
-
-
 @click.command(context_settings=dict(help_option_names=["-h", "--help"]))
 @click.option(
     "--crawldir", "-d", default=".", help="Snippets output filder.", show_default=True
 )
 @click.option("--languages-dir", "-L", help="Path to directory with languages repos.")
-@click.option("--chunksize", "-c", type=int, default=10, help="Size of code snippet.")
+@click.option(
+    "--chunksize",
+    "-c",
+    type=int,
+    default=10,
+    help="Size of code snippet.",
+    show_default=True,
+)
 @click.option(
     "--rows-step", "-s", type=int, default=None, help="Distance between start rows."
 )
 @click.option(
-    "--sqlite-path",
-    "-q",
-    help="Sqlite for writing snippets.",
-    default=None,
+    "--batch-size",
+    "-b",
+    help="Amount of snippets writing to db per transaction.",
+    type=int,
+    default=1000,
     show_default=True,
 )
 @click.option(
@@ -142,7 +180,7 @@ def generate_datasets(
     crawldir: str,
     languages_dir: Optional[str],
     chunksize: int,
-    sqlite_path: Optional[str],
+    batch_size: int,
     rows_step: Optional[int],
     languages_file: str,
 ):
@@ -201,36 +239,41 @@ def generate_datasets(
         for repo in repos_meta["repos"]:
             license = None
 
-            if repo["license"]:
-                license = repo["license"]["spdx_id"]
+            print(repo["name"])
 
-            language_chunks = chunking(
+            loader = ChunkLoader(
                 os.path.join(lang_path, repo["name"]),
                 languages_ext[lang],
                 chunksize,
                 rows_step,
+                batch_size,
                 languages_dir,
             )
 
-            if not language_chunks:
-                continue
+            if repo["license"]:
+                license = repo["license"]["spdx_id"]
 
-            for chunk_data in language_chunks:
-
+            while True:
                 try:
+                    chunks = loader.get_next_chunks()
 
-                    db_tool.write_snippet_to_db(
-                        conn,
-                        **{
-                            "github_repo_url": repo["github_repo_url"],
-                            "commit_hash": repo["commit_hash"],
-                            "snippet": chunk_data["chunk"],
-                            "license": license,
-                            "language": lang.lower(),
-                            "repo_file_name": str(Path(chunk_data["file_name"])),
-                            "starting_line_number": chunk_data["start_line"],
-                        },
-                    )
+                    batch = [
+                        (
+                            repo["github_repo_url"],
+                            repo["commit_hash"],
+                            chunk_data["chunk"],
+                            license,
+                            lang.lower(),
+                            chunk_data["file_name"],
+                            chunk_data["start_line"],
+                        )
+                        for chunk_data in chunks
+                    ]
+
+                    db_tool.write_snippet_to_db(conn, batch)
+
+                    if not chunks:
+                        break
 
                 except KeyboardInterrupt:
                     raise KeyboardInterrupt("CTRL+C")
