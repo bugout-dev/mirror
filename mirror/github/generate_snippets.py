@@ -17,8 +17,10 @@ from .. import settings
 class FileTooLarge(Exception):
     pass
 
+
 class PathIsLink(Exception):
     pass
+
 
 class ChunkLoader:
     def __init__(
@@ -153,11 +155,13 @@ def create_zip_file(files_dir):
 def list_all_files(directory):
     """
     return list of file path inside folder
+
+    Ignores symlinks
     """
     file_list = []  # A list for storing files existing in directories
     dir = Path(directory)
     for x in dir.iterdir():
-        if x.is_file():
+        if not x.is_symlink() and x.is_file():
             file_list.append(x)
         elif x.is_dir() and not x.name.startswith("."):
             file_list.extend(list_all_files(dir / x))
