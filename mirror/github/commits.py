@@ -252,7 +252,9 @@ def commits(
             for i, repo in enumerate(repos):
 
                 # Get commits
-                commits_responce = request_with_limit(repo["commits_url"].replace("{/sha}", ""), headers, min_rate_limit)
+                commits_responce = request_with_limit(
+                    repo["commits_url"].replace("{/sha}", ""), headers, min_rate_limit
+                )
 
                 sha, commits = commits_parser(
                     commits_responce, repo["id"], repo["html_url"], schema

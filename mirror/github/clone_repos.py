@@ -13,6 +13,7 @@ from .utils import get_nearest_value, read_command_type, forward_languages_confi
 
 DATETIME_HEADER = "Date"
 
+
 class CommandNotExistError(Exception):
     """Raised when coomand is not exist."""
 

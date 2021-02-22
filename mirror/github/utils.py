@@ -23,7 +23,7 @@ def request_with_limit(url, headers, min_rate_limit):
             current_rate_limit = int(rate_limit_raw)
             if current_rate_limit <= min_rate_limit:
                 reset_time = response.headers.get(X_RATELIMIT_RESET)
-                time.sleep(abs(int(reset_time)-int(time.time())) + 1)
+                time.sleep(abs(int(reset_time) - int(time.time())) + 1)
             else:
                 break
     return response

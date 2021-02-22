@@ -126,7 +126,7 @@ def popular_repos(
     }
 
     """
-    
+
     GITHUB_TOKEN = globals()["GITHUB_TOKEN"]
 
     if token:
@@ -142,7 +142,7 @@ def popular_repos(
         click.echo(f"start with low rate limit")
 
     if not os.path.exists(crawldir):
-        os.makedirs(crawldir)        
+        os.makedirs(crawldir)
 
     if languages_file:
         try:
@@ -154,7 +154,6 @@ def popular_repos(
         except Exception as err:
             traceback.print_exc()
             print(f"Can't read langiages file. {err}")
-
 
     files_counter = 0
 
