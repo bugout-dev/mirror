@@ -3,15 +3,12 @@ import json
 import time
 import traceback
 import subprocess
-import urllib.parse
-from typing import Tuple, Optional
-from pathlib import Path
-
+from typing import Optional
 
 import click
 import requests
 
-from ..settings import GITHUB_TOKEN, module_version
+from ..settings import module_version
 from .utils import get_nearest_value, read_command_type, forward_languages_config
 
 REMAINING_RATELIMIT_HEADER = "X-RateLimit-Remaining"
@@ -113,7 +110,11 @@ def get_repos_files(repos_dir, start_id, end_id):
 
     """
 
-    dir_files = os.listdir(repos_dir)
+    dir_files = [
+        filename
+        for filename in os.listdir(repos_dir)
+        if filename != "languages_config.json"
+    ]
 
     if not dir_files:
         raise ("Empty repos dir.")
@@ -140,9 +141,11 @@ def get_repos_files(repos_dir, start_id, end_id):
         return dir_files
 
 
-def clone_repository(git_url, out_path):
-    cmd = f"git clone {git_url}"
-    pipe = subprocess.Popen(cmd, shell=True, cwd=out_path)
+def clone_repository(git_url, out_path, depth: int = None):
+    args = f"git clone {git_url}"
+    if depth is not None:
+        args = f"{args} --depth {depth}"
+    pipe = subprocess.Popen(args, shell=True, cwd=out_path)
     pipe.wait()
 
 
@@ -178,12 +181,20 @@ def clone_repository(git_url, out_path):
     default="",
     show_default=True,
 )
+@click.option(
+    "--depth",
+    type=int,
+    default=None,
+    show_default=True,
+    help="Clone depth for each repo - default behavior is to do a full clone",
+)
 def clone_repos(
     start_id: Optional[int],
     end_id: Optional[int],
     crawldir: str,
     repos_dir: str,
     token: str,
+    depth: Optional[int] = None,
 ):
     """
     Clone repos from search api to output dir.
@@ -216,7 +227,6 @@ def clone_repos(
 
     with click.progressbar(files_for_proccessing, label="Download repos") as bar:
         for repos_file in bar:
-
             repos = read_repos(repos_dir, repos_file, start_id, end_id)
 
             if not repos:
@@ -234,7 +244,7 @@ def clone_repos(
 
                     git_url = repo["git_url"]
 
-                    clone_repository(git_url, lang_path)
+                    clone_repository(git_url, lang_path, depth)
 
                     commit_hash = subprocess.run(
                         ["git", "rev-parse", "HEAD"],
