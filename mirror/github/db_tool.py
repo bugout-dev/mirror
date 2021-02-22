@@ -59,8 +59,6 @@ def write_snippet_to_db(conn, batch):
         f"INSERT OR IGNORE INTO {table} "
         f" ({','.join(fields)}) "
         f"VALUES({ ','.join(['?']*len(fields)) });"
-        f"ON CONFLICT(snippet) DO UPDATE"
-        f"SET github_repo_url = excluded.github_repo_url, commit_hash = excluded.commit_hash"
     )
     try:
         c = conn.cursor()
