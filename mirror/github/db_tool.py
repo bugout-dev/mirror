@@ -18,7 +18,6 @@ def create_snippets_table(conn):
                                         commit_hash TEXT,
                                         starting_line_number INTEGER,
                                         batch_size INTEGER,
-                                        UNIQUE(repo_file_name,github_repo_url,batch_size,starting_line_number)                                    
                                 ); """
 
     try:
