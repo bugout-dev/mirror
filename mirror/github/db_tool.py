@@ -9,14 +9,16 @@ def create_snippets_table(conn):
     :return:
     """
     sql_create_snippets_table = """ CREATE TABLE IF NOT EXISTS snippets (
-                                        id integer PRIMARY KEY,
-                                        snippet text NOT NULL,
-                                        language text NOT NULL,
-                                        repo_file_name text,
-                                        github_repo_url text,
-                                        license text,
-                                        commit_hash text,
-                                        starting_line_number integer
+                                        id INTEGER PRIMARY KEY,
+                                        snippet TEXT NOT NULL,
+                                        language TEXT NOT NULL,
+                                        repo_file_name TEXT,
+                                        github_repo_url TEXT,
+                                        license TEXT,
+                                        commit_hash TEXT,
+                                        starting_line_number INTEGER,
+                                        batch_size INTEGER,
+                                        UNIQUE(repo_file_name,github_repo_url,commit_hash,batch_size,starting_line_number)
                                     ); """
 
     try:
@@ -53,14 +55,13 @@ def write_snippet_to_db(conn, batch):
         "language",
         "repo_file_name",
         "starting_line_number",
+        "batch_size",
     ]
 
     sql = sql = (
         f"INSERT OR IGNORE INTO {table} "
         f" ({','.join(fields)}) "
         f"VALUES({ ','.join(['?']*len(fields)) });"
-        f"ON CONFLICT(snippet) DO UPDATE"
-        f"SET github_repo_url = excluded.github_repo_url, commit_hash = excluded.commit_hash"
     )
     try:
         c = conn.cursor()

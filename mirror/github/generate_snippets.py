@@ -304,6 +304,7 @@ def generate_datasets(
                         chunk_data["language"],
                         chunk_data["file_name"],
                         chunk_data["start_line"],
+                        batch_size,
                     )
                     for chunk_data in chunks
                 ]
