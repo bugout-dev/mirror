@@ -18,6 +18,10 @@ class FileTooLarge(Exception):
     pass
 
 
+class PathIsLink(Exception):
+    pass
+
+
 class ChunkLoader:
     def __init__(
         self,
@@ -54,17 +58,15 @@ class ChunkLoader:
             file_relpath = os.path.relpath(file_path, self.common_path)
 
             try:
+                if os.path.islink(file_path):
+                    raise PathIsLink(f"Skipping symbolic link: {file_path}")
+
                 # TODO: need think about encoding becuse it's normal case use cp1252 for powershel scripts
                 try:
-                    with open(
-                        self.files[self.file_index], "r", encoding="utf-8"
-                    ) as file_text:
-
+                    with open(file_path, "r", encoding="utf-8") as file_text:
                         file_lines = file_text.readlines()
                 except:
-                    with open(
-                        self.files[self.file_index], "r", encoding="cp1252"
-                    ) as file_text:
+                    with open(file_path, "r", encoding="cp1252") as file_text:
                         file_lines = file_text.readlines()
 
                 statinfo = os.stat(file_path)
@@ -153,11 +155,15 @@ def create_zip_file(files_dir):
 def list_all_files(directory):
     """
     return list of file path inside folder
+
+    Ignores symlinks
     """
     file_list = []  # A list for storing files existing in directories
     dir = Path(directory)
     for x in dir.iterdir():
-        if x.is_file():
+        if x.is_symlink():
+            continue
+        elif x.is_file():
             file_list.append(x)
         elif x.is_dir() and not x.name.startswith("."):
             file_list.extend(list_all_files(dir / x))
