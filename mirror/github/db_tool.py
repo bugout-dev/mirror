@@ -17,7 +17,8 @@ def create_snippets_table(conn):
                                         license TEXT,
                                         commit_hash TEXT,
                                         starting_line_number INTEGER,
-                                        batch_size INTEGER,
+                                        chunk_size INTEGER,
+                                        UNIQUE(commit_hash, repo_file_name, github_repo_url, chunk_size, starting_line_number)
                                 ); """
 
     try:
@@ -54,17 +55,13 @@ def write_snippet_to_db(conn, batch):
         "language",
         "repo_file_name",
         "starting_line_number",
-        "batch_size",
+        "chunk_size",
     ]
 
     sql = sql = (
         f"INSERT OR IGNORE INTO {table} "
         f" ({','.join(fields)}) "
-        f"VALUES({ ','.join(['?']*len(fields)) }) "
-        f"ON CONFLICT(repo_file_name,github_repo_url,batch_size,starting_line_number) DO UPDATE SET "
-        f"snippet=excluded.snippet, "
-        f"commit_hash=excluded.commit_hash "
-        f"  WHERE excluded.commit_hash != {table}.commit_hash;"
+        f"VALUES({ ','.join(['?']*len(fields)) });"
     )
     try:
         c = conn.cursor()
