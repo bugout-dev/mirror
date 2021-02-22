@@ -161,7 +161,9 @@ def list_all_files(directory):
     file_list = []  # A list for storing files existing in directories
     dir = Path(directory)
     for x in dir.iterdir():
-        if not x.is_symlink() and x.is_file():
+        if x.is_symlink():
+            continue
+        elif x.is_file():
             file_list.append(x)
         elif x.is_dir() and not x.name.startswith("."):
             file_list.extend(list_all_files(dir / x))
