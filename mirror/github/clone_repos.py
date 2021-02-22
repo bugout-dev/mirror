@@ -11,33 +11,12 @@ import requests
 from ..settings import module_version
 from .utils import get_nearest_value, read_command_type, forward_languages_config
 
-REMAINING_RATELIMIT_HEADER = "X-RateLimit-Remaining"
 DATETIME_HEADER = "Date"
-
 
 class CommandNotExistError(Exception):
     """Raised when coomand is not exist."""
 
     pass
-
-
-def request_with_limit(url, headers, min_rate_limit):
-
-    while True:
-
-        response = requests.get(url, headers=headers)
-
-        rate_limit_raw = response.headers.get(REMAINING_RATELIMIT_HEADER)
-
-        if rate_limit_raw is not None:
-            current_rate_limit = int(rate_limit_raw)
-            if current_rate_limit <= min_rate_limit:
-
-                print("Rate limit is end. Awaiting 1 minute.")
-                time.sleep(60)
-            else:
-                break
-    return response
 
 
 def get_lang(repo):

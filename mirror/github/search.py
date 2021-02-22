@@ -12,11 +12,9 @@ from typing import Optional, Tuple
 import click
 import requests
 
-from ..settings import GITHUB_TOKEN
-from .utils import forward_languages_config
+from ..settings import *
+from .utils import forward_languages_config, request_with_limit
 
-
-REMAINING_RATELIMIT_HEADER = "X-RateLimit-Remaining"
 
 DATETIME_HEADER = "Date"
 
@@ -25,25 +23,6 @@ class Error(Exception):
     """Base class for exceptions in this module."""
 
     pass
-
-
-def request_with_limit(url, headers, min_rate_limit):
-
-    while True:
-
-        response = requests.get(url, headers=headers)
-
-        rate_limit_raw = response.headers.get(REMAINING_RATELIMIT_HEADER)
-
-        if rate_limit_raw is not None:
-            current_rate_limit = int(rate_limit_raw)
-            if current_rate_limit <= min_rate_limit:
-
-                print("Rate limit is end. Awaiting 1 minute.")
-                time.sleep(60)
-            else:
-                break
-    return response
 
 
 def encode_query(stars_expression, language):
@@ -147,19 +126,23 @@ def popular_repos(
     }
 
     """
-    files_counter = 0
+    
+    GITHUB_TOKEN = globals()["GITHUB_TOKEN"]
+
+    if token:
+        GITHUB_TOKEN = token
 
     headers = {
         "accept": "application/vnd.github.v3+json",
     }
+
     if GITHUB_TOKEN is not None:
         headers["Authorization"] = f"token {GITHUB_TOKEN}"
+    else:
+        click.echo(f"start with low rate limit")
 
     if not os.path.exists(crawldir):
-        os.makedirs(crawldir)
-
-    if GITHUB_TOKEN is None:
-        click.echo(f"start with low rate limit")
+        os.makedirs(crawldir)        
 
     if languages_file:
         try:
@@ -171,6 +154,9 @@ def popular_repos(
         except Exception as err:
             traceback.print_exc()
             print(f"Can't read langiages file. {err}")
+
+
+    files_counter = 0
 
     for language in languages:
 

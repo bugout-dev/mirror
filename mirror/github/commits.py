@@ -16,22 +16,21 @@ from .utils import flatten_json, get_nearest_value
 import requests
 import click
 
-from .utils import write_with_size, read_command_type
+from ..settings import GITHUB_TOKEN
+from .utils import write_with_size, read_command_type, request_with_limit
 from .data import CommitPublic
+
+
+DATETIME_HEADER = "Date"
+
+
+validate_models = {"CommitPublic": CommitPublic}
 
 
 class MaskStructureError(Exception):
     """Raised when mask missmatch with input json."""
 
     pass
-
-
-REMAINING_RATELIMIT_HEADER = "X-RateLimit-Remaining"
-
-DATETIME_HEADER = "Date"
-
-
-validate_models = {"CommitPublic": CommitPublic}
 
 
 def dump_date(date, file_index, path):
@@ -111,32 +110,6 @@ def create_zip_file(files_dir):
                         os.path.join(root, file), os.path.join(files_dir, "..")
                     ),
                 )
-
-
-def request_with_limit(repo, headers, min_rate_limit):
-    """
-    Request to github api do simple awaite if request limit close to cli specified limit
-    """
-
-    while True:
-
-        response = requests.get(
-            repo["commits_url"].replace("{/sha}", ""), headers=headers
-        )
-
-        rate_limit_raw = response.headers.get(REMAINING_RATELIMIT_HEADER)
-
-        if rate_limit_raw is not None:
-            current_rate_limit = int(rate_limit_raw)
-            if current_rate_limit <= min_rate_limit:
-
-                print("Rate limit is end. Awaiting 1 minute.")
-                time.sleep(60)
-            else:
-                break
-        else:
-            raise ("incorrect commit URL")
-    return response
 
 
 def get_repos_files(repos_dir, start_id, end_id):
@@ -230,16 +203,19 @@ def commits(
     if not os.path.exists(crawldir):
         os.makedirs(crawldir)
 
-    if not token:
-        if os.environ.get("GITHUB_TOKEN"):
-            token = os.environ.get("GITHUB_TOKEN")
-        else:
-            click.echo(f"start with low rate limit")
+    GITHUB_TOKEN = globals()["GITHUB_TOKEN"]
+
+    if token:
+        GITHUB_TOKEN = token
 
     headers = {
         "accept": "application/vnd.github.v3+json",
-        "Authorization": f"token {token}",
     }
+
+    if GITHUB_TOKEN is not None:
+        headers["Authorization"] = f"token {GITHUB_TOKEN}"
+    else:
+        click.echo(f"start with low rate limit")
 
     file_index = 1
 
@@ -276,7 +252,7 @@ def commits(
             for i, repo in enumerate(repos):
 
                 # Get commits
-                commits_responce = request_with_limit(repo, headers, min_rate_limit)
+                commits_responce = request_with_limit(repo["commits_url"].replace("{/sha}", ""), headers, min_rate_limit)
 
                 sha, commits = commits_parser(
                     commits_responce, repo["id"], repo["html_url"], schema

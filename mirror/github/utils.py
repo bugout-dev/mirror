@@ -2,8 +2,31 @@ import os
 import csv
 import json
 from pathlib import Path
+import time
 
 import click
+import requests
+
+REMAINING_RATELIMIT_HEADER = "X-RateLimit-Remaining"
+X_RATELIMIT_RESET = "X-RateLimit-Reset"
+
+
+def request_with_limit(url, headers, min_rate_limit):
+
+    while True:
+
+        response = requests.get(url, headers=headers)
+
+        rate_limit_raw = response.headers.get(REMAINING_RATELIMIT_HEADER)
+
+        if rate_limit_raw is not None:
+            current_rate_limit = int(rate_limit_raw)
+            if current_rate_limit <= min_rate_limit:
+                reset_time = response.headers.get(X_RATELIMIT_RESET)
+                time.sleep(abs(int(reset_time)-int(time.time())) + 1)
+            else:
+                break
+    return response
 
 
 def get_nearest_value(iterable, value):
