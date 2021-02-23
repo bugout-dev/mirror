@@ -179,7 +179,7 @@ def chunk_encode(iterable_lines):
 @click.option(
     "--crawldir", "-d", default=".", help="Snippets output filder.", show_default=True
 )
-@click.option("--clone-dir", "-C", help="Path to directory with languages repos.")
+@click.option("--clone-dir", "-C", help="Path to directory with cloned repo.")
 @click.option(
     "--chunksize",
     "-c",
