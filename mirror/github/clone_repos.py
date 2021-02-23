@@ -173,7 +173,6 @@ def clone_repos(
     end_id: Optional[int],
     crawldir: str,
     repos_dir: str,
-    token: str,
     depth: Optional[int] = None,
 ):
     """
@@ -184,11 +183,6 @@ def clone_repos(
     if not check_command("git"):
         raise CommandNotExistError("Git not found.")
 
-    if not token:
-        GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
-    else:
-        GITHUB_TOKEN = token
-
     if not os.path.exists(crawldir):
         os.makedirs(crawldir)
 
@@ -196,12 +190,7 @@ def clone_repos(
         forward_languages_config(
             os.path.join(repos_dir, "languages_config.json"), crawldir
         )
-
-    headers = {
-        "accept": "application/vnd.github.v3+json",
-        "Authorization": f"token {GITHUB_TOKEN}",
-    }
-
+    
     # read metadata
     files_for_proccessing = get_repos_files(repos_dir, start_id, end_id)
 

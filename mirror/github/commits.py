@@ -203,17 +203,15 @@ def commits(
     if not os.path.exists(crawldir):
         os.makedirs(crawldir)
 
-    GITHUB_TOKEN = globals()["GITHUB_TOKEN"]
-
-    if token:
-        GITHUB_TOKEN = token
+    if not token:
+        token = GITHUB_TOKEN
 
     headers = {
         "accept": "application/vnd.github.v3+json",
     }
 
     if GITHUB_TOKEN is not None:
-        headers["Authorization"] = f"token {GITHUB_TOKEN}"
+        headers["Authorization"] = f"token {token}"
     else:
         click.echo(f"start with low rate limit")
 
