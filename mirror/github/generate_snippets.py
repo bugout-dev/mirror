@@ -179,7 +179,7 @@ def chunk_encode(iterable_lines):
 @click.option(
     "--crawldir", "-d", default=".", help="Snippets output filder.", show_default=True
 )
-@click.option("--languages-dir", "-L", help="Path to directory with languages repos.")
+@click.option("--clone-dir", "-C", help="Path to directory with languages repos.")
 @click.option(
     "--chunksize",
     "-c",
@@ -207,7 +207,7 @@ def chunk_encode(iterable_lines):
 )
 def generate_datasets(
     crawldir: str,
-    languages_dir: Optional[str],
+    clone_dir: Optional[str],
     chunksize: int,
     batch_size: int,
     rows_step: Optional[int],
@@ -221,18 +221,18 @@ def generate_datasets(
     if not rows_step:
         rows_step = chunksize
 
-    if not languages_dir:
-        languages_dir = os.environ.get("LANGUAGES_DIR")
-        if not languages_dir:
-            raise ReadReposDirectoryError("LANGUAGES_DIR not set.")
+    if not clone_dir:
+        clone_dir = os.environ.get("CLONE_DIR")
+        if not clone_dir:
+            raise ReadReposDirectoryError("CLONE_DIR not set.")
 
     # Read languages config file
     try:
         if not languages_file:
-            if not os.path.exists(Path(languages_dir) / "languages_config.json"):
+            if not os.path.exists(Path(clone_dir) / "languages_config.json"):
                 raise ConfigFileNotFoundError("Config file not found.")
             else:
-                langs_file = Path(languages_dir) / "languages_config.json"
+                langs_file = Path(clone_dir) / "languages_config.json"
         else:
 
             langs_file = Path(languages_file)
@@ -261,10 +261,18 @@ def generate_datasets(
     db_tool.create_snippets_table(conn)
 
     crawled_repos: Dict[str, Dict[str, Union[str, None]]] = {}
-    for lang in language_to_extensions:
-        lang_path = os.path.join(languages_dir, lang)
 
-        meta_path = os.path.join(lang_path, "meta.json")
+    # This take a lot of processing vs very simple os.walk().next()[1]
+    all_organization = [
+        folder
+        for folder in os.listdir(clone_dir)
+        if os.path.isdir(os.path.join(clone_dir, folder))
+    ]
+
+    for organization in all_organization:
+        organization_path = os.path.join(clone_dir, organization)
+
+        meta_path = os.path.join(organization_path, "meta.json")
 
         if not os.path.exists(meta_path):
             continue
@@ -273,7 +281,7 @@ def generate_datasets(
             repos_meta = json.load(repos_meta_file)
 
         for repo in repos_meta["repos"]:
-            crawled_repos[os.path.join(lang_path, repo["name"])] = repo
+            crawled_repos[os.path.join(organization_path, repo["name"])] = repo
 
     for repo_path, repo in crawled_repos.items():
         license = None
@@ -285,7 +293,7 @@ def generate_datasets(
             chunksize,
             rows_step,
             batch_size,
-            languages_dir,
+            clone_dir,
         )
 
         if repo["license"]:
