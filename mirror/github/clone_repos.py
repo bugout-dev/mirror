@@ -190,7 +190,7 @@ def clone_repos(
         forward_languages_config(
             os.path.join(repos_dir, "languages_config.json"), crawldir
         )
-    
+
     # read metadata
     files_for_proccessing = get_repos_files(repos_dir, start_id, end_id)
 
