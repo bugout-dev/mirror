@@ -13,16 +13,6 @@ long_description = ""
 with open("README.md") as ifp:
     long_description = ifp.read()
 
-
-def load_requirements(fname: str) -> list:
-    requirements = []
-    with open(fname, "r") as fp:
-        for req in parse_requirements(fp.read()):
-            extras = "[{}]".format(",".join(req.extras)) if req.extras else ""
-            requirements.append("{}{}{}".format(req.name, extras, req.specifier))
-    return requirements
-
-
 setup(
     name=MODULE_NAME,
     version=module.__version__,
@@ -45,11 +35,18 @@ setup(
         "Topic :: Software Development :: Libraries",
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
-    python_requires=">=3.8",
+    python_requires=">=3.5",
     packages=find_packages(),
     package_data={"bugout": ["py.typed"]},
     zip_safe=False,
-    install_requires=load_requirements("requirements.txt"),
-    extras_require={"dev": load_requirements("requirements.dev.txt")},
+    install_requires=[
+        "click",
+        "pydantic",
+        "requests",
+        "tqdm",
+    ],
+    extras_require={
+        "dev": ["black", "mypy", "jupyter"]
+    },
     entry_points={"console_scripts": ["{0} = {0}.cli:cli".format(MODULE_NAME)]},
 )

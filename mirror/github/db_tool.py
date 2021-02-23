@@ -1,34 +1,36 @@
 import sqlite3
 import traceback
 
-#database = r"C:\sqlite\db\pythonsqlite.db"
 
-
-
-
-def create_table_tasks(conn):
-    """ create a table from the create_table_sql statement
+def create_snippets_table(conn):
+    """create a table from the create_table_sql statement
     :param conn: Connection object
     :param create_table_sql: a CREATE TABLE statement
     :return:
     """
-    sql_create_snipets_table = """ CREATE TABLE IF NOT EXISTS snipets (
-                                        id integer PRIMARY KEY,
-                                        snipet text NOT NULL,
-                                        lang text
-                                    ); """
-
+    sql_create_snippets_table = """ CREATE TABLE IF NOT EXISTS snippets (
+                                        id INTEGER PRIMARY KEY,
+                                        snippet TEXT NOT NULL,
+                                        language TEXT NOT NULL,
+                                        repo_file_name TEXT,
+                                        github_repo_url TEXT,
+                                        license TEXT,
+                                        commit_hash TEXT,
+                                        starting_line_number INTEGER,
+                                        chunk_size INTEGER,
+                                        UNIQUE(commit_hash, repo_file_name, github_repo_url, chunk_size, starting_line_number)
+                                ); """
 
     try:
         c = conn.cursor()
-        c.execute(sql_create_snipets_table)
+        c.execute(sql_create_snippets_table)
         conn.commit()
     except Exception as e:
         traceback.print_exc()
 
 
 def create_connection(db_file):
-    """ create a database connection to the SQLite database
+    """create a database connection to the SQLite database
         specified by db_file
     :param db_file: database file
     :return: Connection object or None
@@ -42,14 +44,29 @@ def create_connection(db_file):
 
     return conn
 
-def write_snipet_to_db(conn, snipet, lang):
-    sql = """
-            INSERT OR IGNORE INTO snipets (snipet,lang) VALUES(?,?);
-          """
+
+def write_snippet_to_db(conn, batch):
+    table = "snippets"
+    fields = [
+        "github_repo_url",
+        "commit_hash",
+        "snippet",
+        "license",
+        "language",
+        "repo_file_name",
+        "starting_line_number",
+        "chunk_size",
+    ]
+
+    sql = sql = (
+        f"INSERT OR IGNORE INTO {table} "
+        f" ({','.join(fields)}) "
+        f"VALUES({ ','.join(['?']*len(fields)) });"
+    )
     try:
         c = conn.cursor()
-        result = c.execute(sql,(snipet, lang))
+        result = c.executemany(sql, batch)
         conn.commit()
         return result
     except Exception as err:
-        traceback.print_exc()   
+        traceback.print_exc()
