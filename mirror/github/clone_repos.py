@@ -234,22 +234,23 @@ def clone_repos(
 
             for repo in repos:
                 try:
+
                     lang = get_lang(repo)
 
-                    lang_path = os.path.join(crawldir, lang)
+                    organization_path = os.path.join(crawldir, repo["owner"]["login"])
 
-                    meta_file = os.path.join(lang_path, "meta.json")
+                    meta_file = os.path.join(organization_path, "meta.json")
 
-                    create_dir_meta_if_not_exists(lang_path, meta_file, lang)
+                    create_dir_meta_if_not_exists(organization_path, meta_file, lang)
 
                     git_url = repo["git_url"]
 
-                    clone_repository(git_url, lang_path, depth)
+                    clone_repository(git_url, organization_path, depth)
 
                     commit_hash = subprocess.run(
                         ["git", "rev-parse", "HEAD"],
                         stdout=subprocess.PIPE,
-                        cwd=os.path.join(lang_path, repo["name"]),
+                        cwd=os.path.join(organization_path, repo["name"]),
                     ).stdout
 
                     with open(meta_file, "r") as meta:
