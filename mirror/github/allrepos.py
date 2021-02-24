@@ -21,6 +21,7 @@ import requests
 from tqdm import tqdm  # type: ignore
 
 from ..populate import populate_cli
+from ..settings import GITHUB_TOKEN
 
 subcommand = "allrepos"
 
@@ -59,7 +60,7 @@ def crawl(
         "Accept": "application/vnd.github.v3+json",
         "User-Agent": "simiotics mirror",
     }
-    github_token = os.environ.get("GITHUB_TOKEN")
+    github_token = GITHUB_TOKEN
     if github_token is not None and github_token != "":
         headers["Authorization"] = f"token {github_token}"
 
