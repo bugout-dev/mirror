@@ -155,13 +155,6 @@ def clone_repository(git_url, out_path, depth: int = None):
     show_default=True,
 )
 @click.option(
-    "--token",
-    "-t",
-    help="Access token for increase rate limit. Read from $GITHUB_TOKEN if specify.",
-    default="",
-    show_default=True,
-)
-@click.option(
     "--depth",
     type=int,
     default=None,
