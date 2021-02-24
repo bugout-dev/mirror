@@ -11,7 +11,6 @@ import requests
 from ..settings import module_version
 from .utils import get_nearest_value, read_command_type, forward_languages_config
 
-REMAINING_RATELIMIT_HEADER = "X-RateLimit-Remaining"
 DATETIME_HEADER = "Date"
 
 
@@ -19,25 +18,6 @@ class CommandNotExistError(Exception):
     """Raised when coomand is not exist."""
 
     pass
-
-
-def request_with_limit(url, headers, min_rate_limit):
-
-    while True:
-
-        response = requests.get(url, headers=headers)
-
-        rate_limit_raw = response.headers.get(REMAINING_RATELIMIT_HEADER)
-
-        if rate_limit_raw is not None:
-            current_rate_limit = int(rate_limit_raw)
-            if current_rate_limit <= min_rate_limit:
-
-                print("Rate limit is end. Awaiting 1 minute.")
-                time.sleep(60)
-            else:
-                break
-    return response
 
 
 def get_lang(repo):
@@ -193,7 +173,6 @@ def clone_repos(
     end_id: Optional[int],
     crawldir: str,
     repos_dir: str,
-    token: str,
     depth: Optional[int] = None,
 ):
     """
@@ -204,11 +183,6 @@ def clone_repos(
     if not check_command("git"):
         raise CommandNotExistError("Git not found.")
 
-    if not token:
-        GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
-    else:
-        GITHUB_TOKEN = token
-
     if not os.path.exists(crawldir):
         os.makedirs(crawldir)
 
@@ -216,11 +190,6 @@ def clone_repos(
         forward_languages_config(
             os.path.join(repos_dir, "languages_config.json"), crawldir
         )
-
-    headers = {
-        "accept": "application/vnd.github.v3+json",
-        "Authorization": f"token {GITHUB_TOKEN}",
-    }
 
     # read metadata
     files_for_proccessing = get_repos_files(repos_dir, start_id, end_id)
@@ -234,22 +203,23 @@ def clone_repos(
 
             for repo in repos:
                 try:
+
                     lang = get_lang(repo)
 
-                    lang_path = os.path.join(crawldir, lang)
+                    organization_path = os.path.join(crawldir, repo["owner"]["login"])
 
-                    meta_file = os.path.join(lang_path, "meta.json")
+                    meta_file = os.path.join(organization_path, "meta.json")
 
-                    create_dir_meta_if_not_exists(lang_path, meta_file, lang)
+                    create_dir_meta_if_not_exists(organization_path, meta_file, lang)
 
                     git_url = repo["git_url"]
 
-                    clone_repository(git_url, lang_path, depth)
+                    clone_repository(git_url, organization_path, depth)
 
                     commit_hash = subprocess.run(
                         ["git", "rev-parse", "HEAD"],
                         stdout=subprocess.PIPE,
-                        cwd=os.path.join(lang_path, repo["name"]),
+                        cwd=os.path.join(organization_path, repo["name"]),
                     ).stdout
 
                     with open(meta_file, "r") as meta:
