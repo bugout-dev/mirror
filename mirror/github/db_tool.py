@@ -9,15 +9,17 @@ def create_snippets_table(conn):
     :return:
     """
     sql_create_snippets_table = """ CREATE TABLE IF NOT EXISTS snippets (
-                                        id integer PRIMARY KEY,
-                                        snippet text NOT NULL,
-                                        language text NOT NULL,
-                                        repo_file_name text,
-                                        github_repo_url text,
-                                        license text,
-                                        commit_hash text,
-                                        starting_line_number integer
-                                    ); """
+                                        id INTEGER PRIMARY KEY,
+                                        snippet TEXT NOT NULL,
+                                        language TEXT NOT NULL,
+                                        repo_file_name TEXT,
+                                        github_repo_url TEXT,
+                                        license TEXT,
+                                        commit_hash TEXT,
+                                        starting_line_number INTEGER,
+                                        chunk_size INTEGER,
+                                        UNIQUE(commit_hash, repo_file_name, github_repo_url, chunk_size, starting_line_number)
+                                ); """
 
     try:
         c = conn.cursor()
@@ -53,6 +55,7 @@ def write_snippet_to_db(conn, batch):
         "language",
         "repo_file_name",
         "starting_line_number",
+        "chunk_size",
     ]
 
     sql = sql = (
