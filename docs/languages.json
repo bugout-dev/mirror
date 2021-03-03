@@ -1,12 +1,17 @@
 {
     "PowerShell": [
-        "ps1"
+        "ps1",
+        "psm1", 
+        "psd1"
     ],
     "Ruby": [
         "rb"
     ],
     "JavaScript": [
-        "js"
+        "js", 
+        "jsx", 
+        "es6", 
+        "mjs"
     ],
     "Python": [
         "py"
@@ -19,7 +24,7 @@
         "txt"
     ],
     "C": [
-        "c"
+        "c", "h"
     ],
     "C++": [
         "cc",
@@ -36,19 +41,37 @@
     ],
     "JSON": [
         "json",
-        "jsonl"
+        "jsonl",
+        "json5"
     ],
     "YAML": [
         "yml",
         "yaml"
     ],
     "HTML": [
-        "html"
+        "html", 
+        "htm", 
+        "shtml", 
+        "xhtml", 
+        "inc", 
+        "tmpl", 
+        "tpl"
     ],
     "CSV": [
         "csv"
     ],
     "TSV": [
         "tsv"
+    ],
+    "Java": [
+        "java"
+    ],
+    "Go": [
+        "go", 
+        "golang"
+    ],
+    "Rust": [
+        "rust", 
+        "rs"
     ]
 }
