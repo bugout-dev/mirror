@@ -24,7 +24,7 @@ from .data import CommitPublic
 DATETIME_HEADER = "Date"
 
 
-validate_models = {"CommitPublic": CommitPublic}
+validate_models = {"CommitPublic": CommitPublic, "any": "not validate commits"}
 
 
 class MaskStructureError(Exception):
@@ -72,8 +72,10 @@ def commits_parser(github_commits, repo_id, html_url, schema):
 
         allowed_data = {"repo_id": repo_id, "repo_html_url": html_url}
 
-        if commit:
+        if commit and schema != "any":
             validate(flatten_json(commit), allowed_data, schema)
+        elif schema == "any":
+            allowed_data.update(flatten_json(commit))
 
         out.append(allowed_data)
 
