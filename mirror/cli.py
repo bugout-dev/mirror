@@ -5,6 +5,7 @@ from .github.allrepos import nextid_handler as nextid_populator
 from .github.allrepos import sample_handler as sample_populator
 from .github.allrepos import validate_handler as validate_populator
 from .github.commits import commits
+from .github.issues import issues
 from .github.search import popular_repos
 from .github.clone_repos import clone_repos
 from .github.generate_snippets import generate_datasets
@@ -31,6 +32,7 @@ mirror.add_command(popular_repos, name="search")
 mirror.add_command(clone_repos, name="clone")
 mirror.add_command(generate_datasets, name="generate_snippets")
 mirror.add_command(commits, name="commits")
+mirror.add_command(issues, name="issues")
 
 cli = click.CommandCollection(sources=[mirror])
 

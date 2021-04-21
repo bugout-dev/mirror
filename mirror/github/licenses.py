@@ -13,6 +13,8 @@ from typing import Any, Dict, List
 import requests
 from tqdm import tqdm  # type: ignore
 
+from ..settings import module_version
+
 subcommand = "licenses"
 
 
