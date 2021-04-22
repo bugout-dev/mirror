@@ -9,7 +9,7 @@ import zipfile
 import string
 import traceback
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 from .utils import flatten_json, get_nearest_value
 
@@ -51,6 +51,7 @@ def create_file(init_json, file_index, path):
 
         json.dump(init_json, file)
 
+
 def get_lang(repo):
     """
     Return name of output language folder
@@ -68,12 +69,14 @@ def validate(data, allowed_data, schema):
     pydentic_class = validate_models[schema]
     allowed_data.update(pydentic_class(**data).dict())
 
+
 def create_issues_path(org_path):
 
     issues_path = os.path.join(org_path, "issues")
 
     if not os.path.exists(issues_path):
         os.makedirs(issues_path)
+
 
 def create_dir_meta_if_not_exists(lang_path: str, meta_file: str, lang: str):
 
@@ -95,7 +98,6 @@ def create_dir_meta_if_not_exists(lang_path: str, meta_file: str, lang: str):
                 },
                 meta,
             )
-
 
 
 def commits_parser(github_commits, repo_id, html_url, schema):
@@ -226,7 +228,14 @@ def get_repos_files(repos_dir, start_id, end_id):
     default=10,
     help="Minimum remaining rate limit on API under which the crawl is interrupted",
 )
-def issuses(
+@click.option(
+    "no_comment",
+    "-N",
+    type=bool,
+    default=10,
+    help="Load issues without comment",
+)
+def issues(
     start_id: Optional[int],
     end_id: Optional[int],
     crawldir: str,
@@ -234,6 +243,7 @@ def issuses(
     schema: str,
     token: Optional[str],
     min_rate_limit: int,
+    no_comment: bool,
 ):
 
     """
@@ -250,16 +260,14 @@ def issuses(
         token = GITHUB_TOKEN
 
     # rections header
-    headers = {
-        "Accept": "application/vnd.github.squirrel-girl-preview+json"
-    }
+    headers = {"Accept": "application/vnd.github.squirrel-girl-preview+json"}
 
     if GITHUB_TOKEN is not None:
         headers["Authorization"] = f"token {token}"
     else:
         click.echo(f"start with low rate limit")
         file_index = 1
-    
+
     files_for_proccessing = get_repos_files(repos_dir, start_id, end_id)
 
     with click.progressbar(files_for_proccessing, label="Download issues") as bar:
@@ -277,6 +285,7 @@ def issuses(
                     lang = get_lang(repo)
 
                     organization_path = os.path.join(crawldir, repo["owner"]["login"])
+                    print(organization_path)
 
                     meta_file = os.path.join(organization_path, "meta.json")
 
@@ -297,7 +306,7 @@ def issuses(
                                 "name": repo["name"],
                                 "full_name": repo["full_name"],
                                 "github_repo_url": repo["html_url"],
-                                #"commit_hash": commit_hash.decode("utf8"),
+                                # "commit_hash": commit_hash.decode("utf8"),
                                 "license": repo["license"],
                                 "fork": repo["fork"],
                                 "description": repo["description"],
@@ -318,67 +327,111 @@ def issuses(
                         json.dump(meta_data, meta)
                     repo_path = os.path.join(organization_path, repo["name"])
 
-
-
                     all_isuses = []
 
-                    # use search endpoint:
-                    init_url = f"https://api.github.com/search/issues?q=repo:{repo_full_name}&per_page=100"
+                    # # use search endpoint:
+                    # init_url = f"https://api.github.com/search/issues?q=repo:{repo_full_name}&per_page=100"
 
-                    issues = request_with_limit(init_url, headers,min_rate_limit).json()
+                    # issues_init = request_with_limit(init_url, headers,min_rate_limit).json()
 
-                    all_isuses.extend(issues["data"])
+                    all_isuses_loaded = False
 
-                    while len(all_isuses) != issues["total_count"]:
+                    try:
 
-                        page += 1
+                        while not all_isuses_loaded:
 
-                        issues = request_with_limit(f"{init_url}&page={page}", headers,min_rate_limit).json()
-                    
-                        all_isuses.extend(issues["data"])
-                    
+                            issues = request_with_limit(
+                                f"{repo['issues_url'].replace('{/number}','')}?page={page}&per_page=100&state=all&sort=created&direction=asc",
+                                headers,
+                                min_rate_limit,
+                            ).json()
+
+                            all_isuses.extend(issues)
+
+                            page += 1
+
+                            if len(issues) == 0:
+                                all_isuses_loaded = True
+
+                    except:
+                        pass
+
                     # ecxtract comments
 
-                    page = 1
+                    print(f"Issues count: {len(all_isuses)}")
 
-                    for issue in issues:
+                    for issue in all_isuses:
+                        total_comment = 0
+                        if not no_comment:
 
-                        all_comments = []
-                        
+                            page = 1
 
-                        init_comments_url = issue["comments_url"]
+                            all_comments: List[Dict[Any, Any]] = []
 
-                        comments_count = issue["comments"]
+                            init_comments_url = issue["comments_url"]
 
-                        #author_association = issue["author_association"]
+                            comments_count = issue["comments"]
 
-                        if comments_count > 0:
+                            # author_association = issue["author_association"]
 
-                            while len(all_comments) != comments_count:
+                            if comments_count > 0:
 
-                                comments = request_with_limit(f"{init_comments_url}&per_page=100&page={page}", headers,min_rate_limit).json()
+                                while len(all_comments) != comments_count:
 
-                                all_comments.extend(comments)
+                                    comments = request_with_limit(
+                                        f"{init_comments_url}?per_page=100&page={page}",
+                                        headers,
+                                        min_rate_limit,
+                                    ).json()
 
-                                page += 1
-                        
-                        issue["comments_extracted_data"] = all_comments
-                        
-                        issues_path = os.path.join(organization_path, "issues")
+                                    if len(comments) == 0:
+                                        break
 
-                        if not os.path.exists(issues_path):
-                            os.makedirs(issues_path)
+                                    all_comments.extend(comments)
 
-                        issuse_file = os.path.join(issues_path, f"issue{issue['number']}.json")
-                    
-                        issuse_file 
+                                    page += 1
 
-                        with open(issuse_file, "w") as issues_file:
+                            total_comment += len(all_comments)
 
-                            json.dump({"init":issue,
-                                      "comments":all_comments} ,issues_file)
+                            issues_path = os.path.join(
+                                organization_path, repo["name"], "issues"
+                            )
+
+                            if not os.path.exists(issues_path):
+                                os.makedirs(issues_path)
+
+                            issuse_file = os.path.join(
+                                issues_path, f"issue{issue['number']}.json"
+                            )
+
+                            with open(issuse_file, "w") as issues_file:
+
+                                json.dump(
+                                    {"issue": issue, "comments": all_comments},
+                                    issues_file,
+                                )
+                        else:
+                            issues_path = os.path.join(
+                                organization_path, repo["name"], "issues"
+                            )
+
+                            if not os.path.exists(issues_path):
+                                os.makedirs(issues_path)
+
+                            issuse_file = os.path.join(
+                                issues_path, f"issue{issue['number']}.json"
+                            )
+
+                            with open(issuse_file, "w") as issues_file:
+
+                                json.dump({"issue": issue}, issues_file)
+
+                        print(f"Comment count: {total_comment}")
+
                 except:
-                    pass
+                    traceback.print_exc()
+                    raise
+
 
 if __name__ == "__main__":
-    commits()
+    issues()
