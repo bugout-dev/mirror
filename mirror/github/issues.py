@@ -426,7 +426,7 @@ def issues(
 
                                 json.dump({"issue": issue}, issues_file)
 
-                        print(f"Comment count: {total_comment}")
+                        #print(f"Comment count: {total_comment}")
 
                 except:
                     traceback.print_exc()
