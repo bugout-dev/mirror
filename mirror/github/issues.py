@@ -273,7 +273,10 @@ def issues(
     with click.progressbar(files_for_proccessing, label="Download issues") as bar:
 
         for repos_file in bar:
-            repos = read_repos(repos_dir, repos_file, start_id, end_id)
+            try:
+                repos = read_repos(repos_dir, repos_file, start_id, end_id)
+            except:
+                continue
 
             if not repos:
                 continue
@@ -326,6 +329,8 @@ def issues(
                         )
                         json.dump(meta_data, meta)
                     repo_path = os.path.join(organization_path, repo["name"])
+                    if os.path.exists(repo_path):
+                        continue
 
                     all_isuses = []
 
@@ -359,11 +364,10 @@ def issues(
                     # ecxtract comments
 
                     print(f"Issues count: {len(all_isuses)}")
-
-                    for issue in all_isuses:
-                        total_comment = 0
-                        if not no_comment:
-
+                    if not no_comment:
+                        for issue in all_isuses:
+                            total_comment = 0
+                            
                             page = 1
 
                             all_comments: List[Dict[Any, Any]] = []
@@ -410,21 +414,21 @@ def issues(
                                     {"issue": issue, "comments": all_comments},
                                     issues_file,
                                 )
-                        else:
-                            issues_path = os.path.join(
-                                organization_path, repo["name"], "issues"
-                            )
+                    else:
+                        issues_path = os.path.join(
+                            organization_path, repo["name"], "issues"
+                        )
 
-                            if not os.path.exists(issues_path):
-                                os.makedirs(issues_path)
+                        if not os.path.exists(issues_path):
+                            os.makedirs(issues_path)
 
-                            issuse_file = os.path.join(
-                                issues_path, f"issue{issue['number']}.json"
-                            )
+                        issuse_file = os.path.join(
+                            issues_path, "issues.json"
+                        )
 
-                            with open(issuse_file, "w") as issues_file:
+                        with open(issuse_file, "w") as issues_file:
 
-                                json.dump({"issue": issue}, issues_file)
+                            json.dump({"issues": all_isuses}, issues_file)
 
                         #print(f"Comment count: {total_comment}")
 
