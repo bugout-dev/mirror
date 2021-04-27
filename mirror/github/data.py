@@ -19,3 +19,24 @@ class CommitPublic(MyBaseModel):
     html_url: Optional[str] = None
     author_html_url: Optional[str] = None
     committer_html_url: Optional[str] = None
+
+
+
+
+class IssuesPublic(MyBaseModel):
+    body: Optional[str] = None
+    title:  Optional[str] = None
+    comments_url: Optional[str] = None
+    comments: Optional[int] = None
+    html_url: Optional[str] = None
+    state: Optional[str] = None
+    number: Optional[int] = None
+    author_association: Optional[str] = None
+    url: Optional[str] = None
+    repository_url: Optional[str] = None
+    labels_url: Optional[str] = None
+    events_url: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    closed_at: Optional[datetime] = None
+

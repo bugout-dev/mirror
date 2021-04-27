@@ -9,6 +9,7 @@ from .github.issues import issues
 from .github.search import popular_repos
 from .github.clone_repos import clone_repos
 from .github.generate_snippets import generate_datasets
+from .github.generate_issues import issues_generate
 from .github.sync import handler as sync_populator
 from .github.licenses import licenses_handler as licenses_populator
 
@@ -31,6 +32,7 @@ mirror.add_command(validate_populator, name="validate")
 mirror.add_command(popular_repos, name="search")
 mirror.add_command(clone_repos, name="clone")
 mirror.add_command(generate_datasets, name="generate_snippets")
+mirror.add_command(issues_generate, name="generate_issues")
 mirror.add_command(commits, name="commits")
 mirror.add_command(issues, name="issues")
 
