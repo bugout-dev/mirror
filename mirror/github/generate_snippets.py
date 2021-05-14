@@ -222,9 +222,7 @@ def generate_datasets(
         rows_step = chunksize
 
     if not clone_dir:
-        clone_dir = os.environ.get("CLONE_DIR")
-        if not clone_dir:
-            raise ReadReposDirectoryError("CLONE_DIR not set.")
+        clone_dir = settings.CLONE_DIR
 
     # Read languages config file
     try:
@@ -335,7 +333,7 @@ def generate_datasets(
 
         json.dump(
             {
-                "mirror version": settings.module_version,
+                "mirror version": settings.MIRROR_VERSION,
                 "date": f"{datetime.now()}",
                 "languages init config": language_to_extensions,
                 "chunksize": chunksize,

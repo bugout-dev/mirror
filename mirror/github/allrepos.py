@@ -3,9 +3,6 @@ Collect metadata for all GitHub repositories readable to the given token.
 
 Support checkpointing against a small state object - the integer ID of the last repository seen.
 """
-
-import argparse
-import csv
 import json
 import glob
 import multiprocessing
@@ -13,20 +10,16 @@ import os
 import random
 import sys
 import time
-from typing import Any, Callable, Dict, Iterator, List, Optional, TextIO, Tuple
+from typing import Any, Dict, Iterator, List, Tuple
 
 import click
 
 import requests
 from tqdm import tqdm  # type: ignore
 
-from ..populate import populate_cli
-from ..settings import GITHUB_TOKEN
+from .. import settings
 
 subcommand = "allrepos"
-
-REPOSITORIES_URL = "https://api.github.com/repositories"
-REMAINING_RATELIMIT_HEADER = "X-RateLimit-Remaining"
 
 
 def crawl(
@@ -60,15 +53,14 @@ def crawl(
         "Accept": "application/vnd.github.v3+json",
         "User-Agent": "simiotics mirror",
     }
-    github_token = GITHUB_TOKEN
-    if github_token is not None and github_token != "":
-        headers["Authorization"] = f"token {github_token}"
+    if settings.GITHUB_TOKEN is not None and settings.GITHUB_TOKEN != "":
+        headers["Authorization"] = f"token {settings.GITHUB_TOKEN}"
 
     since = start_id
     curr_rate_limit = min_rate_limit + 10
     while since is not None and since < max_id and curr_rate_limit > min_rate_limit:
         time.sleep(interval)
-        r = requests.get(REPOSITORIES_URL, params={"since": since}, headers=headers)
+        r = requests.get(settings.REPOSITORIES_URL, params={"since": since}, headers=headers)
         response_body = r.json()
         if not response_body:
             break
@@ -76,7 +68,7 @@ def crawl(
         result["data"].extend(response_body)  # type: ignore
         since = response_body[-1].get("id")
 
-        curr_rate_limit_raw = r.headers.get(REMAINING_RATELIMIT_HEADER)
+        curr_rate_limit_raw = r.headers.get(settings.REMAINING_RATELIMIT_HEADER)
         try:
             curr_rate_limit = -1
             if curr_rate_limit_raw is not None:

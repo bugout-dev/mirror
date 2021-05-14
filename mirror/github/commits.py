@@ -1,28 +1,16 @@
-import re
 import os
 import csv
-import sys
 import json
-import time
-import glob
 import zipfile
-import string
-import traceback
-from pathlib import Path
 from typing import Optional
 
 from .utils import flatten_json, get_nearest_value
 
-import requests
 import click
 
-from ..settings import GITHUB_TOKEN
+from .. import settings
 from .utils import write_with_size, read_command_type, request_with_limit
 from .data import CommitPublic
-
-
-DATETIME_HEADER = "Date"
-
 
 validate_models = {"CommitPublic": CommitPublic}
 
@@ -204,13 +192,13 @@ def commits(
         os.makedirs(crawldir)
 
     if not token:
-        token = GITHUB_TOKEN
+        token = settings.GITHUB_TOKEN
 
     headers = {
         "accept": "application/vnd.github.v3+json",
     }
 
-    if GITHUB_TOKEN is not None:
+    if settings.GITHUB_TOKEN is not None:
         headers["Authorization"] = f"token {token}"
     else:
         click.echo(f"start with low rate limit")
@@ -264,7 +252,7 @@ def commits(
                     license = repo["license"]
 
                 # date of creating that commits file
-                date = commits_responce.headers.get(DATETIME_HEADER)
+                date = commits_responce.headers.get(settings.DATETIME_HEADER)
 
                 # Indexing
                 writer.writerow(

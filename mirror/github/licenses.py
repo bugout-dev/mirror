@@ -1,8 +1,6 @@
 """
 Collect license information for a repository or a list of repositories
 """
-
-import argparse
 import json
 import os
 import sys
@@ -11,7 +9,8 @@ import time
 from typing import Any, Dict, List
 
 import requests
-from tqdm import tqdm  # type: ignore
+
+from .. import settings
 
 subcommand = "licenses"
 
@@ -33,7 +32,7 @@ def get_license(repo_api_url: str) -> Dict[str, Any]:
         "Accept": "application/vnd.github.v3+json",
         "User-Agent": "simiotics mirror",
     }
-    github_token = os.environ.get("GITHUB_TOKEN")
+    github_token = settings.GITHUB_TOKEN
     if github_token is not None and github_token != "":
         headers["Authorization"] = f"token {github_token}"
 

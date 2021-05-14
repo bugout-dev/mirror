@@ -1,16 +1,15 @@
 """
 Synchronize repository metadata into a SQLite database
 """
-
-import argparse
 from datetime import datetime, timezone
 import json
 import sqlite3
 import sys
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
-from tqdm import tqdm  # type: ignore
 import click
+from tqdm import tqdm  # type: ignore
+
 from .allrepos import ordered_crawl
 
 

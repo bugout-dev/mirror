@@ -1,10 +1,8 @@
 # pylint: disable=no-name-in-module
 # pylint: disable=no-self-argument
+from typing import Optional
 
-from datetime import datetime
-from typing import Any, Dict, List, Optional
-
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class MyBaseModel(BaseModel):
