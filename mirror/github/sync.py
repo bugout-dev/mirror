@@ -1,5 +1,5 @@
 """
-Synchronize repository metadata into a SQLite database
+Synchronize repository metadata with local SQLite database.
 """
 from datetime import datetime, timezone
 import json

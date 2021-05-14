@@ -1,3 +1,6 @@
+"""
+Popular repositories search engine.
+"""
 import os
 import json
 import string
@@ -9,6 +12,7 @@ import click
 
 from .. import settings
 from .utils import forward_languages_config, request_with_limit
+
 
 class Error(Exception):
     """Base class for exceptions in this module."""

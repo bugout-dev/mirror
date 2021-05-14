@@ -1,4 +1,5 @@
 import click
+
 from . import __version__
 from .github.allrepos import crawl_handler as crawl_populator
 from .github.allrepos import nextid_handler as nextid_populator
@@ -8,8 +9,6 @@ from .github.commits import commits
 from .github.search import popular_repos
 from .github.clone_repos import clone_repos
 from .github.generate_snippets import generate_datasets
-from .github.sync import handler as sync_populator
-from .github.licenses import licenses_handler as licenses_populator
 
 
 @click.group()

@@ -1,3 +1,6 @@
+"""
+Cloning repository workflow.
+"""
 import os
 import json
 import traceback
@@ -6,8 +9,9 @@ from typing import Optional
 
 import click
 
-from .. import settings
+from .. import __version__
 from .utils import get_nearest_value, read_command_type, forward_languages_config
+
 
 class CommandNotExistError(Exception):
     """Raised when coomand is not exist."""
@@ -54,7 +58,7 @@ def create_dir_meta_if_not_exists(lang_path: str, meta_file: str, lang: str):
                     "language": lang,
                     "repos": [],
                     "crawled_at": None,
-                    "mirror version": settings.MIRROR_VERSION,
+                    "mirror version": __version__,
                 },
                 meta,
             )

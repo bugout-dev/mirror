@@ -1,3 +1,6 @@
+"""
+Process commits for repository.
+"""
 import os
 import csv
 import json

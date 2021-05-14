@@ -1,5 +1,5 @@
 """
-Collect license information for a repository or a list of repositories
+Collect license information for a repository or a list of repositories.
 """
 import json
 import os

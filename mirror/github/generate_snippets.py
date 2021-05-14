@@ -1,3 +1,6 @@
+"""
+Snippets generator.
+"""
 import base64
 from collections import defaultdict
 from datetime import datetime
@@ -10,7 +13,8 @@ import zipfile
 
 import click
 
-from . import db_tool
+from ..db import db
+from .. import __version__
 from .. import settings
 
 
@@ -223,6 +227,8 @@ def generate_datasets(
 
     if not clone_dir:
         clone_dir = settings.CLONE_DIR
+        if clone_dir is None:
+            raise ReadReposDirectoryError("CLONE_DIR environment variable must be set")
 
     # Read languages config file
     try:
@@ -255,8 +261,8 @@ def generate_datasets(
         os.makedirs(snippets_dir)
 
     # Create connection
-    conn = db_tool.create_connection(os.path.join(snippets_dir, "snippets.db"))
-    db_tool.create_snippets_table(conn)
+    conn = db.create_connection(os.path.join(snippets_dir, "snippets.db"))
+    db.create_snippets_table(conn)
 
     crawled_repos: Dict[str, Dict[str, Union[str, None]]] = {}
 
@@ -315,7 +321,7 @@ def generate_datasets(
                     for chunk_data in chunks
                 ]
 
-                db_tool.write_snippet_to_db(conn, batch)
+                db.write_snippet_to_db(conn, batch)
 
                 if not chunks:
                     break
@@ -333,7 +339,7 @@ def generate_datasets(
 
         json.dump(
             {
-                "mirror version": settings.MIRROR_VERSION,
+                "mirror version": __version__,
                 "date": f"{datetime.now()}",
                 "languages init config": language_to_extensions,
                 "chunksize": chunksize,

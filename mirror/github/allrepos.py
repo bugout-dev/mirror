@@ -17,7 +17,7 @@ import click
 import requests
 from tqdm import tqdm  # type: ignore
 
-from .. import settings
+from ..settings import GITHUB_API_URL, GITHUB_TOKEN, REMAINING_RATELIMIT_HEADER
 
 subcommand = "allrepos"
 
@@ -53,14 +53,16 @@ def crawl(
         "Accept": "application/vnd.github.v3+json",
         "User-Agent": "simiotics mirror",
     }
-    if settings.GITHUB_TOKEN is not None and settings.GITHUB_TOKEN != "":
-        headers["Authorization"] = f"token {settings.GITHUB_TOKEN}"
+    if GITHUB_TOKEN is not None and GITHUB_TOKEN != "":
+        headers["Authorization"] = f"token {GITHUB_TOKEN}"
 
     since = start_id
     curr_rate_limit = min_rate_limit + 10
     while since is not None and since < max_id and curr_rate_limit > min_rate_limit:
         time.sleep(interval)
-        r = requests.get(settings.REPOSITORIES_URL, params={"since": since}, headers=headers)
+        r = requests.get(
+            f"{GITHUB_API_URL}/repositories", params={"since": since}, headers=headers
+        )
         response_body = r.json()
         if not response_body:
             break
@@ -68,7 +70,7 @@ def crawl(
         result["data"].extend(response_body)  # type: ignore
         since = response_body[-1].get("id")
 
-        curr_rate_limit_raw = r.headers.get(settings.REMAINING_RATELIMIT_HEADER)
+        curr_rate_limit_raw = r.headers.get(REMAINING_RATELIMIT_HEADER)
         try:
             curr_rate_limit = -1
             if curr_rate_limit_raw is not None:

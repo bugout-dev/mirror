@@ -17,3 +17,13 @@ class CommitPublic(MyBaseModel):
     html_url: Optional[str] = None
     author_html_url: Optional[str] = None
     committer_html_url: Optional[str] = None
+
+
+class RepositoryFork(BaseModel):
+    name: Optional[str] = None
+    full_name: Optional[str] = None
+    owner: Optional[str] = None
+    html_url: Optional[str] = None
+    forks_count: Optional[str] = None
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
