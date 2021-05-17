@@ -45,8 +45,11 @@ setup(
         "requests",
         "tqdm",
     ],
-    extras_require={
-        "dev": ["black", "mypy", "jupyter"]
+    extras_require={"dev": ["black", "mypy", "jupyter"]},
+    entry_points={
+        "console_scripts": [
+            "{0} = {0}.cli:cli".format(MODULE_NAME),
+            "{0}-cli = {0}.cli_argp:main".format(MODULE_NAME)
+        ]
     },
-    entry_points={"console_scripts": ["{0} = {0}.cli:cli".format(MODULE_NAME)]},
 )

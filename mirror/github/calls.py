@@ -2,7 +2,7 @@
 Processing requests to GitHub API.
 """
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import requests
 
@@ -29,7 +29,11 @@ def fetch_repository_forks(
     """
     url = f"{GITHUB_API_URL}/repos/{owner}/{repo}/forks"
     headers = {"Accept": "application/vnd.github.v3+json"}
-    params = {"sort": sort, "per_page": per_page, "page": page}
+    params: Dict[str, Union[str, int]] = {
+        "sort": sort,
+        "per_page": per_page,
+        "page": page,
+    }
     try:
         r = requests.get(
             url, headers=headers, params=params, timeout=GITHUB_API_REQUEST_TIMEOUT

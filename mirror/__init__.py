@@ -3,7 +3,7 @@ Mirror - Tools for software project analysis
 """
 __author__ = "Bugout"
 __maintainer__ = __author__
-__description__ = "Tools for software project analysis"
+__description__ = "Tools for GitHub software project analysis"
 
 __email__ = "engineering@bugout.dev"
 __license__ = "MIT"

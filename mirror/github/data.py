@@ -1,8 +1,8 @@
 # pylint: disable=no-name-in-module
 # pylint: disable=no-self-argument
-from typing import Optional
+from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class MyBaseModel(BaseModel):
@@ -27,3 +27,9 @@ class RepositoryFork(BaseModel):
     forks_count: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+
+
+class RepositoryForksList(BaseModel):
+    owner: str
+    repo: str
+    forks: List[RepositoryFork] = Field(default_factory=set)
