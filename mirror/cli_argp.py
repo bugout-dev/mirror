@@ -6,6 +6,9 @@ subcommands.
 import argparse
 from typing import Callable, Dict
 
+from .github import forks
+from . import __version__
+
 
 def populate_cli(
     parser: argparse.ArgumentParser,
@@ -30,3 +33,20 @@ def populate_cli(
     for subcommand, populator in subcommand_populators.items():
         subparser = subcommand_parsers.add_parser(subcommand)
         populator(subparser)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Mirror: Tools for GitHub software project analysis",
+        epilog=f"Version {__version__}",
+    )
+    subcommand = parser.add_subparsers(description="Mirror commands")
+
+    forks.mutate_argparser(subcommand)
+
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

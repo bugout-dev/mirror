@@ -1,15 +1,15 @@
 import os
-import uuid
-from typing import Optional
 
-from . import __version__
+DATETIME_HEADER = "Date"
 
-MODULE_NAME = "mirror"
-
-module_version = __version__
+GITHUB_API_URL = "https://api.github.com"
+REMAINING_RATELIMIT_HEADER = "X-RateLimit-Remaining"
+RESET_RATELIMIT_HEADER = "X-RateLimit-Reset"
+GITHUB_API_REQUEST_TIMEOUT = 10
 
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 CLONE_DIR = os.environ.get("CLONE_DIR")
+
 MIRROR_CRAWL_INTERVAL_SECONDS = os.environ.get("MIRROR_CRAWL_INTERVAL_SECONDS")
 MIRROR_CRAWL_MIN_RATE_LIMIT = os.environ.get("MIRROR_CRAWL_MIN_RATE_LIMIT")
 MIRROR_CRAWL_BATCH_SIZE = os.environ.get("MIRROR_CRAWL_BATCH_SIZE")

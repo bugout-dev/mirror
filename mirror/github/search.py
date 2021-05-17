@@ -1,22 +1,17 @@
+"""
+Popular repositories search engine.
+"""
 import os
-import csv
 import json
-import time
 import string
 import traceback
 import urllib.parse
-from pathlib import Path
-from typing import Optional, Tuple
-
+from typing import Optional
 
 import click
-import requests
 
-from ..settings import *
+from .. import settings
 from .utils import forward_languages_config, request_with_limit
-
-
-DATETIME_HEADER = "Date"
 
 
 class Error(Exception):
@@ -128,13 +123,13 @@ def popular_repos(
     """
 
     if not token:
-        token = GITHUB_TOKEN
+        token = settings.GITHUB_TOKEN
 
     headers = {
         "accept": "application/vnd.github.v3+json",
     }
 
-    if GITHUB_TOKEN is not None:
+    if settings.GITHUB_TOKEN is not None:
         headers["Authorization"] = f"token {token}"
     else:
         click.echo(f"start with low rate limit")
@@ -207,7 +202,7 @@ def popular_repos(
                     write_repos(
                         data,
                         alredy_parsed,
-                        search_response.headers.get(DATETIME_HEADER),
+                        search_response.headers.get(settings.DATETIME_HEADER),
                         files_counter,
                         crawldir,
                         language,

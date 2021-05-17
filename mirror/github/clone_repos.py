@@ -1,17 +1,16 @@
+"""
+Cloning repository workflow.
+"""
 import os
 import json
-import time
 import traceback
 import subprocess
 from typing import Optional
 
 import click
-import requests
 
-from ..settings import module_version
+from .. import __version__
 from .utils import get_nearest_value, read_command_type, forward_languages_config
-
-DATETIME_HEADER = "Date"
 
 
 class CommandNotExistError(Exception):
@@ -59,7 +58,7 @@ def create_dir_meta_if_not_exists(lang_path: str, meta_file: str, lang: str):
                     "language": lang,
                     "repos": [],
                     "crawled_at": None,
-                    "mirror version": module_version,
+                    "mirror version": __version__,
                 },
                 meta,
             )
