@@ -3,7 +3,7 @@ from importlib.machinery import SourceFileLoader
 from pkg_resources import parse_requirements
 from setuptools import find_packages, setup
 
-MODULE_NAME = "mirror"
+MODULE_NAME = "bugout-mirror"
 
 module = SourceFileLoader(
     MODULE_NAME, os.path.join(MODULE_NAME, "__init__.py")
@@ -45,8 +45,6 @@ setup(
         "requests",
         "tqdm",
     ],
-    extras_require={
-        "dev": ["black", "mypy", "jupyter"]
-    },
+    extras_require={"dev": ["black", "mypy", "jupyter"]},
     entry_points={"console_scripts": ["{0} = {0}.cli:cli".format(MODULE_NAME)]},
 )
