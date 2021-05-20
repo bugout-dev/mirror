@@ -5,7 +5,7 @@ Extracts stack traces from documents
 import json
 import sqlite3
 import sys
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import click
 from tqdm import tqdm
@@ -130,7 +130,7 @@ def handler(
     if runtime is not None:
         extractor_names = [runtime]
 
-    result = {"like": like, "infile": infile, "data": []}
+    result: Dict[str, Any] = {"like": like, "infile": infile, "data": []}
 
     con = sqlite3.connect(infile)
     try:
