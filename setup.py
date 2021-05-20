@@ -14,7 +14,7 @@ with open("README.md") as ifp:
     long_description = ifp.read()
 
 setup(
-    name=MODULE_NAME,
+    name="bugout-mirror",
     version=module.__version__,
     author=module.__author__,
     author_email=module.__email__,
