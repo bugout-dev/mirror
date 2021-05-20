@@ -3,7 +3,7 @@ from importlib.machinery import SourceFileLoader
 from pkg_resources import parse_requirements
 from setuptools import find_packages, setup
 
-MODULE_NAME = "bugout-mirror"
+MODULE_NAME = "bugout_mirror"
 
 module = SourceFileLoader(
     MODULE_NAME, os.path.join(MODULE_NAME, "__init__.py")
