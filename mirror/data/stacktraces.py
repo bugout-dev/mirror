@@ -85,7 +85,7 @@ EXTRACTORS: Dict[str, Callable[[str], List[str]]] = {
 @click.option(
     "-r",
     "--runtime",
-    type=click.Choice(EXTRACTORS, case_sensitive=False),
+    type=click.Choice(list(EXTRACTORS), case_sensitive=False),
     required=False,
     default=None,
     help="Runtime for which to extract stack traces from the given document",
