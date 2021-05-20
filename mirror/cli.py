@@ -10,6 +10,7 @@ from .github.clone_repos import clone_repos
 from .github.generate_snippets import generate_datasets
 from .github.sync import handler as sync_populator
 from .github.licenses import licenses_handler as licenses_populator
+from .data import stacktraces
 
 
 @click.group()
@@ -18,19 +19,42 @@ def mirror() -> None:
     pass
 
 
-@mirror.command()
+@mirror.command(
+    context_settings={
+        "help_option_names": ["-h", "--help"],
+    },
+)
 def version() -> None:
     click.echo(__version__)
 
 
-mirror.add_command(crawl_populator, name="crawl")
-mirror.add_command(nextid_populator, name="nextid")
-mirror.add_command(sample_populator, name="sample")
-mirror.add_command(validate_populator, name="validate")
-mirror.add_command(popular_repos, name="search")
-mirror.add_command(clone_repos, name="clone")
-mirror.add_command(generate_datasets, name="generate_snippets")
-mirror.add_command(commits, name="commits")
+@mirror.group("github")
+def mirror_github() -> None:
+    pass
+
+
+mirror_github.add_command(crawl_populator, name="crawl")
+mirror_github.add_command(nextid_populator, name="nextid")
+mirror_github.add_command(sample_populator, name="sample")
+mirror_github.add_command(validate_populator, name="validate")
+mirror_github.add_command(popular_repos, name="search")
+mirror_github.add_command(clone_repos, name="clone")
+mirror_github.add_command(generate_datasets, name="generate_snippets")
+mirror_github.add_command(commits, name="commits")
+
+
+@mirror.group(
+    "data",
+    context_settings={
+        "help_option_names": ["-h", "--help"],
+    },
+)
+def mirror_data() -> None:
+    pass
+
+
+mirror_data.add_command(stacktraces.handler, "stacktraces")
+
 
 cli = click.CommandCollection(sources=[mirror])
 

@@ -14,7 +14,7 @@ with open("README.md") as ifp:
     long_description = ifp.read()
 
 setup(
-    name=MODULE_NAME,
+    name="bugout-mirror",
     version=module.__version__,
     author=module.__author__,
     author_email=module.__email__,
@@ -45,8 +45,6 @@ setup(
         "requests",
         "tqdm",
     ],
-    extras_require={
-        "dev": ["black", "mypy", "jupyter"]
-    },
+    extras_require={"dev": ["black", "mypy", "jupyter"]},
     entry_points={"console_scripts": ["{0} = {0}.cli:cli".format(MODULE_NAME)]},
 )
